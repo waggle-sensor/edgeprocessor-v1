@@ -1,3 +1,8 @@
 #!/bin/bash
 
+if "x${1}" == "x--system"; then
+  ./scripts/configure-system.sh
+  cd $current_dir
+fi
+
 apt-get --no-install-recommends install -y network-manager
