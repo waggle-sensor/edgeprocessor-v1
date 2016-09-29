@@ -1,11 +1,30 @@
 #!/bin/bash
 
-echo -e "10.31.81.10\tnodecontroller" >> /etc/hosts
+CONFIGURE_SYSTEM=0
+while [[ $# -gt 0 ]]; do
+  key="$1"
+  echo "Key: $key"
+  case $key in
+    -s)
+      BEEHIVE_HOST="$2"
+      shift
+      ;;
+    --server=*)
+      BEEHIVE_HOST="${key#*=}"
+      ;;
+    --system)
+      CONFIGURE_SYSTEM=1
+      ;;
+      *)
+      ;;
+  esac
+  shift
+done
+
+if [ $CONFIGURE_SYSTEM -eq 1 ]; then
+./scripts/configure-system.sh
+fi
 
 apt-get --no-install-recommends install -y network-manager
 apt-get autoclean
 apt-get autoremove -y
-
-# Restrict SSH connections to local port bindings and ethernet card subnet
-sed -i 's/^#ListenAddress ::$/ListenAddress 127.0.0.1/' /etc/ssh/sshd_config
-sed -i 's/^#ListenAddress 0.0.0.0$/ListenAddress 10.31.81.51/' /etc/ssh/sshd_config 
