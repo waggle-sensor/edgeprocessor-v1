@@ -28,3 +28,6 @@ fi
 apt-get --no-install-recommends install -y network-manager
 apt-get autoclean
 apt-get autoremove -y
+
+pip install git+https://github.com/waggle-sensor/pywaggle
+pip3 install git+https://github.com/waggle-sensor/pywaggle
