@@ -2,8 +2,6 @@
 # Include files from /etc/network/interfaces.d:
 # created by /usr/lib/waggle/guestnode/scripts/configure-system.sh
 
-source-directory /etc/network/interfaces.d
-
 
 auto lo eth0
 iface lo inet loopback
