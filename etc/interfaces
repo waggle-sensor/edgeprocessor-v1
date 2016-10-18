@@ -3,10 +3,10 @@
 # created by /usr/lib/waggle/guestnode/scripts/configure-system.sh
 
 
-auto lo enxMAC_ADDRESS
+auto lo enx%MAC_STRING%
 iface lo inet loopback
 
-iface enxMAC_ADDRESS inet static
+iface enx%MAC_STRING% inet static
       address 10.31.81.51
       netmask 255.255.255.0
       #gateway 10.31.81.10
