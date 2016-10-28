@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# this will make sure that an empty eMMC card will get the waggle image
+touch /root/do_recovery
+
 echo -e "10.31.81.10\tnodecontroller" >> /etc/hosts
 
 # Restrict SSH connections to local port bindings and ethernet card subnet
