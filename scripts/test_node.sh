@@ -43,33 +43,33 @@ perms=$(stat -c '%U %G %a' /usr/lib/waggle/SSL/guest/id_rsa_waggle_aot_guest_nod
 [ "$perms" == "root root 600" ]
 print_result "Guest Key Permissions" $?
 
-ifconfig | fgrep "          inet addr:10.31.81.51  Bcast:10.31.81.255  Mask:255.255.255.0"
+ifconfig | fgrep "          inet addr:10.31.81.51  Bcast:10.31.81.255  Mask:255.255.255.0" && true
 print_result "Built-in Ethernet IP Address" $?
 
 line_count=$(cat /etc/ssh/sshd_config | fgrep -e 'ListenAddress 127.0.0.1' -e 'ListenAddress 10.31.81.51' | wc -l)
 [ $line_count -eq 2 ]
 print_result "sshd Listen Addresses" $?
 
-cat /etc/ssh/sshd_config | fgrep 'PermitRootLogin no'
+cat /etc/ssh/sshd_config | fgrep 'PermitRootLogin no' && true
 print_result "sshd No Root Login" $?
 
-cat /etc/waggle/node_id | egrep '[0-9a-f]{16}'
+cat /etc/waggle/node_id | egrep '[0-9a-f]{16}' && true
 print_result "Node ID Set" $?
 
 . /usr/lib/waggle/core/scripts/detect_mac_address.sh
-cat /etc/hostname | fgrep "${MAC_STRING}SD"
+cat /etc/hostname | fgrep "${MAC_STRING}SD" && true
 print_result "Hostname Set" $?
 
 . /usr/lib/waggle/core/scripts/detect_disk_devices.sh
-parted -s ${CURRENT_DISK_DEVICE}p2 print | grep --color=never -e ext | awk '{print $3}' | egrep '15\.[0-9]GB'
+parted -s ${CURRENT_DISK_DEVICE}p2 print | grep --color=never -e ext | awk '{print $3}' | egrep '15\.[0-9]GB' && true
 print_result "SD Resize" $?
 
-parted -s ${OTHER_DISK_DEVICE}p2 print | grep --color=never -e ext | awk '{print $3}' | egrep '15\.[0-9]GB'
+parted -s ${OTHER_DISK_DEVICE}p2 print | grep --color=never -e ext | awk '{print $3}' | egrep '15\.[0-9]GB' && true
 print_result "Recovery to eMMC" $?
 
 units=("waggle-epoch" "waggle-heartbeat" "waggle-plugin-manager")
 for unit in $units; do
-  systemctl status $unit | fgrep 'Active: active (running)'
+  systemctl status $unit | fgrep 'Active: active (running)' && true
   print_result "$unit Service" $?
 done
 
@@ -82,6 +82,6 @@ device_names=('Microphone' 'Top Camera' 'Bottom Camera')
 for i in $(seq 0 `expr ${#devices[@]} - 1`); do
   device=${devices[i]}
   device_name=${device_names[i]}
-  lsusb | grep $device
+  lsusb | grep $device && true
   print_result "$device_name USB Device" $? 1
 done
