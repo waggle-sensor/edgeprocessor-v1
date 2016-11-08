@@ -1,5 +1,5 @@
 #!/bin/bash
 
 touch start_test
-systemctl start waggle-test-node
+/bin/systemctl start waggle-test.service
 sleep 5
