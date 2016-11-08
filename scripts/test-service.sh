@@ -5,7 +5,7 @@
 
 run_tests() {
   /usr/lib/waggle/guestnode/scripts/test_node.sh \
-    > /home/waggle/test_node_${ODROID_MODEL}_${CURRENT_DISK_DEVICE_TYPE}.log
+    > /home/waggle/test_node_GN_${CURRENT_DISK_DEVICE_TYPE}.log
 }
 
 generate_report() {
