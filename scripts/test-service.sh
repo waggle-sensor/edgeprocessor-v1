@@ -36,6 +36,9 @@ elif [ -e ${continue_file} ]; then
   rm ${continue_file}
   touch /media/test${finish_file}
 elif [ -e ${finish_file} ]; then
+  if [ ! -e /home/waggle/test_node_GN_SD.log ]; then
+    run_tests
+  fi
   generate_report
   rm ${finish_file}
 fi
