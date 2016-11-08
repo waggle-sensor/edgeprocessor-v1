@@ -12,7 +12,7 @@ generate_report() {
   # Retrieve the eMMC test log
   cp /media/test/home/waggle/test_node_GN_${OTHER_DISK_DEVICE_TYPE}.log /home/waggle/
 
-  scp /home/waggle/test_node_*.log -i /usr/lib/waggle/SSL/guest/id_rsa_waggle_aot_guest_node waggle@10.31.81.10:
+  scp -i /usr/lib/waggle/SSL/guest/id_rsa_waggle_aot_guest_node /home/waggle/test_node_*.log waggle@10.31.81.10:
 }
 
 mount | grep '/media/test' && true
@@ -25,20 +25,18 @@ continue_file=/home/waggle/continue_test
 finish_file=/home/waggle/finish_test
 if [ -e ${start_file} ] ; then
   run_tests
+  touch /media/test${continue_file}
   rm ${start_file}
-  if [ "${CURRENT_DISK_DEVICE_TYPE}" == "SD" ]; then
-    touch /media/test${continue_file}
-  else
-    touch /media/test${finish_file}
-  fi
 elif [ -e ${continue_file} ]; then
   run_tests
-  rm ${continue_file}
   touch /media/test${finish_file}
-elif [ -e ${finish_file} ]; then
-  if [ ! -e /home/waggle/test_node_GN_SD.log ]; then
-    run_tests
+  if [ "${CURRENT_DISK_DEVICE_TYPE}" == "MMC" ]; then
+    touch /media/test${finish_file}
+  elif [ "${CURRENT_DISK_DEVICE_TYPE}" == "SD" ]; then
+    generate_report
   fi
+  rm ${continue_file}
+elif [ -e ${finish_file} ]; then
   generate_report
   rm ${finish_file}
 fi
