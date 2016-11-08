@@ -1,5 +1,7 @@
 #!/bin/bash
 
-touch start_test
+if [ ! -e /home/waggle/continue_test ]; then
+  touch /home/waggle/start_test
+fi
 sudo /bin/systemctl start waggle-test.service
 sleep 5
