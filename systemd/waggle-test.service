@@ -2,7 +2,7 @@
 Description=Tests the Waggle extension node.
 
 [Service]
-Type=OneShot
+Type=oneshot
 WorkingDirectory=/usr/lib/waggle/guestnode/
 ExecStart=/usr/lib/waggle/guestnode/scripts/test-service.sh
 
