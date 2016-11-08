@@ -39,3 +39,4 @@ elif [ -e ${finish_file} ]; then
   generate_report
   rm ${finish_file}
 fi
+echo "Finished"
