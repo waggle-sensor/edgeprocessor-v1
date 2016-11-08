@@ -10,7 +10,7 @@ run_tests() {
 
 generate_report() {
   # Retrieve the eMMC test log
-  cp /media/test/home/waggle/test_node_XU3_${OTHER_DISK_DEVICE_TYPE}.log /home/waggle/
+  cp /media/test/home/waggle/test_node_GN_${OTHER_DISK_DEVICE_TYPE}.log /home/waggle/
 
   scp /home/waggle/test_node_*.log -i /usr/lib/waggle/SSL/guest/id_rsa_waggle_aot_guest_node waggle@10.31.81.10:
 }
