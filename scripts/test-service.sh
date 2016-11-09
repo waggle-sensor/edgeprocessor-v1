@@ -21,7 +21,7 @@ generate_report() {
   cat /media/test/home/waggle/test_node_GN_MMC.log >> $report_file
 }
 
-mount | grep '/media/test' && true
+df | fgrep '/media/test'
 if [ $? -eq 1 ]; then
   mount "${OTHER_DISK_DEVICE}p2" /media/test
 fi
