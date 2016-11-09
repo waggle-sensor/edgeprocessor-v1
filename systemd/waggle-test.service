@@ -7,4 +7,5 @@ WorkingDirectory=/usr/lib/waggle/guestnode/
 ExecStart=/usr/lib/waggle/guestnode/scripts/test-service.sh
 
 [Install]
-WantedBy=multi-user.target
+# Uncomment to run automatically when systemd starts
+#WantedBy=multi-user.target
