@@ -11,6 +11,7 @@ run_tests() {
 generate_report() {
   # Retrieve the eMMC test log
   cp /media/test/home/waggle/test_node_GN_${OTHER_DISK_DEVICE_TYPE}.log /home/waggle/
+  sync
 
   scp -i /usr/lib/waggle/SSL/guest/id_rsa_waggle_aot_guest_node /home/waggle/test_node_*.log waggle@10.31.81.10:
 }
@@ -26,12 +27,15 @@ finish_file=/home/waggle/finish_test
 if [ -e ${start_file} ] ; then
   run_tests
   touch /media/test${continue_file}
+  sync
   rm ${start_file}
 elif [ -e ${continue_file} ]; then
   run_tests
   touch /media/test${finish_file}
+  sync
   if [ "${CURRENT_DISK_DEVICE_TYPE}" == "MMC" ]; then
     touch /media/test${finish_file}
+    sync
   elif [ "${CURRENT_DISK_DEVICE_TYPE}" == "SD" ]; then
     generate_report
   fi
