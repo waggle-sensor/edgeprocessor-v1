@@ -12,10 +12,6 @@ generate_report() {
   # Retrieve the eMMC test log
   cp /media/test/home/waggle/test_node_GN_${OTHER_DISK_DEVICE_TYPE}.log /home/waggle/
   sync
-
-  scp -i /usr/lib/waggle/SSL/guest/id_rsa_waggle_aot_guest_node \
-    -o "StrictHostKeyChecking no" -o "PasswordAuthentication no" -o "ConnectTimeout 2" \
-    /home/waggle/test_node_*.log waggle@10.31.81.10:
 }
 
 mount | grep '/media/test' && true
