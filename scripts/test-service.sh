@@ -9,9 +9,16 @@ run_tests() {
 }
 
 generate_report() {
-  # Retrieve the eMMC test log
-  cp /media/test/home/waggle/test_node_GN_${OTHER_DISK_DEVICE_TYPE}.log /home/waggle/
-  sync
+  local report_file="/home/waggle/test-report.txt"
+  echo >> $report_file
+  echo "Guest Node SD Test Results" >> $report_file
+  echo "--------------------------" >> $report_file
+  cat /home/waggle/test_node_GN_SD.log >> $report_file
+
+  echo >> $report_file
+  echo "Guest Node eMMC Test Results" >> $report_file
+  echo "----------------------------" >> $report_file
+  cat /media/test/home/waggle/test_node_GN_MMC.log >> $report_file
 }
 
 mount | grep '/media/test' && true
