@@ -30,4 +30,3 @@ pip install git+https://github.com/waggle-sensor/pywaggle
 pip3 install git+https://github.com/waggle-sensor/pywaggle
 
 cp ${current_dir}/systemd/* /etc/systemd/system
-systemctl enable waggle-test.service
