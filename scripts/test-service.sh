@@ -10,7 +10,6 @@ run_tests() {
 
 generate_report() {
   local report_file="/home/waggle/test-report.txt"
-  echo >> $report_file
   echo "Guest Node SD Test Results" >> $report_file
   echo "--------------------------" >> $report_file
   cat /home/waggle/test_node_GN_SD.log >> $report_file
