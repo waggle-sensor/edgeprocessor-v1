@@ -31,6 +31,8 @@ continue_file=/home/waggle/continue_test
 finish_file=/home/waggle/finish_test
 if [ -e ${recovery_file} ] ; then
  echo "Disk recovery operation in progress. Aborting..."
+ echo "Disk recovery operation in progress. Aborting..." \
+     > /home/waggle/test_node_GN_${CURRENT_DISK_DEVICE_TYPE}.log
 elif [ -e ${start_file} ] ; then
   run_tests
   touch /media/test${continue_file}
