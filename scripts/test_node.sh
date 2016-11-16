@@ -34,7 +34,7 @@ print_result "sudo Disabled" $?
 
 directories=("/etc/waggle" "/usr/lib/waggle" "/usr/lib/waggle/core" "/usr/lib/waggle/plugin_manager" "/usr/lib/waggle/nodecontroller" \
              "/usr/lib/waggle/SSL" "/usr/lib/waggle/SSL/guest" "/usr/lib/waggle/SSL/node" "/usr/lib/waggle/SSL/waggleca")
-for dir in $directories; do
+for dir in ${directories[@]}; do
   [ -e $dir ]
   print_result "$dir Directory" $?
 done
@@ -68,8 +68,8 @@ print_result "SD Resize" $?
 parted -s ${OTHER_DISK_DEVICE}p2 print | grep --color=never -e ext | awk '{print $3}' | egrep '15\.[0-9]GB' && true
 print_result "Recovery to eMMC" $?
 
-units=("waggle-epoch" "waggle-heartbeat" "waggle-plugin-manager")
-for unit in $units; do
+units=("waggle-epoch" "waggle-heartbeat")
+for unit in ${units[@]}; do
   systemctl status $unit | fgrep 'Active: active (running)' && true
   print_result "$unit Service" $?
 done
