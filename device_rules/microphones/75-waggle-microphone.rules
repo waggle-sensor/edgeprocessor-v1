@@ -1,0 +1,3 @@
+SUBSYSTEM!="usb", ACTION!="add", GOTO="add_rules_end"
+SUBSYSTEM=="controlC", KERNEL=="controlC[0-9]*", ATTRS{idVendor}=="0d8c", ATTRS{idProduct}=="013c", SYMLINK+="waggle_microphone"
+LABEL="add_rules_end"

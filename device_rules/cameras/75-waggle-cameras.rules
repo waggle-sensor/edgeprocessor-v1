@@ -1,0 +1,4 @@
+SUBSYSTEM!="usb", ACTION!="add", GOTO="add_rules_end"
+SUBSYSTEM=="tty", KERNEL=="ttyUSB[0-9]*", ATTRS{idVendor}=="05a3", ATTRS{idProduct}=="9830", SYMLINK+="waggle_top_cam"
+SUBSYSTEM=="tty", KERNEL=="ttyACM[0-9]*", ATTRS{idVendor}=="05a3", ATTRS{idProduct}=="9520", SYMLINK+="waggle_bottom_cam"
+LABEL="add_rules_end"
