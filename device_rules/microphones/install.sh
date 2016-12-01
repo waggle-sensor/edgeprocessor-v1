@@ -8,4 +8,4 @@ cp 75-waggle-microphone.rules /etc/udev/rules.d/
 
 set +x
 echo "run: udevadm control --reload-rules"
-echo "     udevadm trigger --subsystem-match=tty --action=add"
+echo "     udevadm trigger --subsystem-match=sound --action=add"

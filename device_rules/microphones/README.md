@@ -1,6 +1,6 @@
-##Set up static /dev endpoints to access Cameras##
+##Set up static /dev endpoints to access microphone##
 
-The two cameras, known as upward and downward cameras, need to be distinguished in order for the processors to properly handle data regarding their characteristics (e.g., orientation and direction). To set up run install.sh script.
+The waggle-registered microphone will be recognized. To set up run install.sh script.
 
 ##Setup:##
 
@@ -8,15 +8,12 @@ The two cameras, known as upward and downward cameras, need to be distinguished 
 sudo ./install.sh
 ```
 
-After the above steps, when cameras are connected,  they should be available for access at __/dev/waggle_top_cam__ and __/dev/waggle_bottom_cam__ respectively. The above two are symbolic links to the standard Linux ttyACMX naming scheming under /dev. For example - 
+After the above step, when the microphone is connected, the link __waggle_microphone__ indicates the microphone in the system under /dev. When use the microphone refer to the microphone name saved in __/etc/waggle/waggle_name_microphone__. For example - 
 ```bash
-$ls -l /dev/waggle_coresense /dev/waggle_sysmon
-lrwxrwxrwx 1 root root 7 Feb 29 11:30 /dev/waggle_coresense -> ttyACM0 
-lrwxrwxrwx 1 root root 7 Feb 29 11:30 /dev/waggle_sysmon -> ttyACM1
+$ls -l /dev/waggle_microphone /etc/waggle/waggle_name_microphone
+lrwxrwxrwx 1 root root 13 Dec  1 20:53 /dev/waggle_microphone -> snd/controlC1
+-rw-r--r-- 1 root root 21 Dec  1 20:53 /etc/waggle/waggle_name_microphone
+
+$cat /etc/waggle/waggle_name_microphone
+USB PnP Sound Device
 ```
-
-
-
-
-
-

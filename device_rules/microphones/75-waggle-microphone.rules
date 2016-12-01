@@ -1,3 +1,3 @@
-SUBSYSTEM!="usb", ACTION!="add", GOTO="add_rules_end"
-SUBSYSTEM=="controlC", KERNEL=="controlC[0-9]*", ATTRS{idVendor}=="0d8c", ATTRS{idProduct}=="013c", SYMLINK+="waggle_microphone"
+SUBSYSTEM!="sound", ACTION!="add", GOTO="add_rules_end"
+SUBSYSTEM=="sound", KERNEL=="controlC[0-9]*", ATTRS{idVendor}=="0d8c", ATTRS{idProduct}=="013c", SYMLINK+="waggle_microphone", ENV{ID_MODEL}="$attr{product}", RUN+="/bin/sh -c 'echo $env{ID_MODEL} > /etc/waggle/waggle_name_microphone'"
 LABEL="add_rules_end"
