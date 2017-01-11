@@ -31,3 +31,11 @@ pip3 install git+https://github.com/waggle-sensor/pywaggle
 
 cp ${current_dir}/systemd/* /etc/systemd/system
 systemctl enable waggle-test.service
+
+cd ${current_dir}/device_rules/cameras
+./install.sh
+
+cd ${current_dir}/device_rules/microphones
+./install.sh
+
+echo "done"
