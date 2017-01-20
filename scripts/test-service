@@ -48,6 +48,16 @@ if [ -e ${start_file} ] ; then
   echo "Syncing disk..."
   sync
 
+  echo "Sleeping to approximately sync reboot with the Node Controller"
+  sleep_count=0
+  ping -c 1 10.31.81.10 > /dev/null 2>&1
+  nc_down=$?
+  while [[ nc_down -eq 0 && sleep_count < 10 ]]; do
+    sleep 30
+    ping -c 1 10.31.81.10 > /dev/null 2>&1
+    nc_down=$?
+  done
+
   echo "Halting to trigger reboot..."
   halt
 elif [ -e ${finish_file} ]; then
