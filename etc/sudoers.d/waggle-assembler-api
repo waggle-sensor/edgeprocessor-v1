@@ -1,2 +1,2 @@
 waggle ALL=(ALL) NOPASSWD: /usr/lib/waggle/guestnode/scripts/run-tests
-waggle ALL=(ALL) NOPASSWD: /usr/lib/waggle/nodecontroller/scripts/lockdown
+waggle ALL=(ALL) NOPASSWD: /usr/lib/waggle/guestnode/scripts/lockdown
