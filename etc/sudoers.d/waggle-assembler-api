@@ -1,4 +1,2 @@
-# waggle ALL=(ALL) NOPASSWD: /usr/lib/waggle/guestnode/scripts/run-tests
-# waggle ALL=(ALL) NOPASSWD: /usr/lib/waggle/guestnode/scripts/lockdown
 waggle ALL=(ALL) NOPASSWD: /usr/bin/python3 /usr/lib/waggle/guestnode/scripts/serial/interface.py
 

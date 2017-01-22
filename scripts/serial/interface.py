@@ -29,6 +29,8 @@ def process_loop():
     if command == "quit":
       print(json.dumps({"rc":0}))
       return
+    elif command == "type":
+      print(json.dumps({"rc":0, "type":"XU4"}))
     elif command == "nodeid":
       # arp -a 10.31.81.10
       arp_output = subprocess.check_output('arp -a 10.31.81.10')
