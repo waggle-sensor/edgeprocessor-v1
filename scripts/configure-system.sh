@@ -18,6 +18,8 @@ cp ${script_dir}/../etc/network/interfaces /etc/network/interfaces
 rm -rf /etc/sudoers.d/waggle*
 cp ${script_dir}/../etc/sudoers.d/* /etc/sudoers.d/
 
+echo > /home/waggle/.ssh/authorized_keys
+
 # add AoT guest node cert to root authorized_keys files
 mkdir -p /root/.ssh
 chmod 744 /root/.ssh
