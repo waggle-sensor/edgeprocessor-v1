@@ -1,5 +1,7 @@
 #!/bin/bash
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # this will make sure that an empty eMMC card will get the waggle image
 touch /root/do_recovery
 
@@ -11,10 +13,10 @@ sed -i 's/^#ListenAddress 0.0.0.0$/ListenAddress 10.31.81.51/' /etc/ssh/sshd_con
 
 # NetworkManager will try to manage any interfaces *not* listed in
 # /etc/network/interfaces, so just replace it with what we want
-cp ./etc/network/interfaces /etc/network/interfaces
+cp ${script_dir}/etc/network/interfaces /etc/network/interfaces
 
 rm -rf /etc/sudoers.d/waggle*
-cp ./etc/sudoers.d/waggle-test-service /etc/sudoers.d/
+cp ${script_dir}/etc/sudoers.d/waggle-test-service /etc/sudoers.d/
 
 # add AoT guest node cert to root authorized_keys files
 mkdir -p /root/.ssh
