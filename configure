@@ -29,6 +29,8 @@ apt-get autoremove -y
 pip install git+https://github.com/waggle-sensor/pywaggle
 pip3 install git+https://github.com/waggle-sensor/pywaggle
 
+systemctl enable waggle-test.service
+
 ln -s ${current_dir}/scripts/serial/interface.py /usr/local/bin/interface.py
 
 # set script permissions
