@@ -61,6 +61,7 @@ if [ -e ${start_file} ] ; then
   echo "[waggle-test] exiting start" > /dev/ttyS0
 
   echo "Halting to trigger reboot..."
+  sleep 15
   halt
 elif [ -e ${finish_file} ]; then
   echo "Found ${finish_file}..."
