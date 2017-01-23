@@ -29,6 +29,12 @@ generate_report() {
   umount /media/test
 }
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source $script_dir/utils.sh
+
+echo "Waiting for waggle-init to finish..."
+wait_for_init
+
 # Determine root and alternate boot medium root device paths
 . /usr/lib/waggle/core/scripts/detect_disk_devices.sh
 
@@ -37,10 +43,13 @@ finish_file=/home/waggle/finish_test
 
 if [ -e ${start_file} ] ; then
   echo "Found start_test."
-  run_tests
 
-  echo "Creating ${finish_file}..."
-  touch ${finish_file}
+  if [ "${CURRENT_DISK_DEVICE_TYPE}" == "SD" ]; then
+    run_tests
+  else:
+    echo "Creating ${finish_file}..."
+    touch ${finish_file}
+  fi
 
   echo "Removing ${start_file}..."
   rm ${start_file}
@@ -62,6 +71,9 @@ if [ -e ${start_file} ] ; then
     nc_down=$?
   done
 
+  echo "Sending completion message to serial console..."
+  echo "[waggle-test] exiting start" > /dev/ttyS0
+
   echo "Halting to trigger reboot..."
   halt
 elif [ -e ${finish_file} ]; then
@@ -72,4 +84,7 @@ elif [ -e ${finish_file} ]; then
 
   echo "Removing ${finish_file}..."
   rm ${finish_file}
+
+  echo "Sending completion message to serial console..."
+  echo "[waggle-test] exiting finish" > /dev/ttyS0
 fi
