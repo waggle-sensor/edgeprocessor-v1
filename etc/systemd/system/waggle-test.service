@@ -1,0 +1,10 @@
+[Unit]
+Description=Tests the Waggle extension node.
+After=waggle-init.service
+
+[Service]
+WorkingDirectory=/usr/lib/waggle/guestnode/
+ExecStart=/usr/lib/waggle/guestnode/scripts/test-service
+
+[Install]
+WantedBy=multi-user.target

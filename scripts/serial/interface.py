@@ -36,12 +36,13 @@ def process_loop():
       arp_output = subprocess.check_output('arp -a 10.31.81.10')
       # ex: nodecontroller (10.31.81.10) at 00:1e:06:10:7d:97 [ether] on enx001e06303eaa
       node_id = arp_output[32:49].replace(':', '')
-      print(json.dumps({"rc":0, "id":node_id}))
+      print(json.dumps({"rc":0, "nodeid":node_id}))
     elif command == "disk":
-      print(json.dumps({"rc":0, "id":socket.gethostname()[12:15]}))
+      print(json.dumps({"rc":0, "disk":socket.gethostname()[12:15]}))
     elif command == "test":
       return_value = os.system(''.join((script_dir, "/run-tests")))
-      print(json.dumps({"rc":return_value.to_bytes(2, byteorder='big')[0]}))
+      test_log = subprocess.check_output('cat', '/home/waggle/test.log')
+      print(json.dumps({"rc":return_value.to_bytes(2, byteorder='big')[0], "test":test_log}))
     elif command == "lockdown":
       return_value = os.system(''.join((script_dir, "/lockdown")))
       print(json.dumps({"rc":return_value.to_bytes(2, byteorder='big')[0]}))
