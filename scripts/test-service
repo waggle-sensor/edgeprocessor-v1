@@ -46,7 +46,7 @@ if [ -e ${start_file} ] ; then
 
   if [ "${CURRENT_DISK_DEVICE_TYPE}" == "SD" ]; then
     run_tests
-  else:
+  else
     echo "Creating ${finish_file}..."
     touch ${finish_file}
   fi
