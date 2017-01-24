@@ -57,9 +57,6 @@ if [ -e ${start_file} ] ; then
   echo "Syncing disk..."
   sync
 
-  echo "Sending completion message to serial console..."
-  echo "[waggle-test] exiting start" > /dev/ttyS0
-
   echo "Halting to trigger reboot..."
   sleep 15
   halt
@@ -72,7 +69,4 @@ elif [ -e ${finish_file} ]; then
 
   echo "Removing ${finish_file}..."
   rm ${finish_file}
-
-  echo "Sending completion message to serial console..."
-  echo "[waggle-test] exiting finish" > /dev/ttyS0
 fi
