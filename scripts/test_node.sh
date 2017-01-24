@@ -40,7 +40,7 @@ key_names=('AoT Guest Key')
 for i in $(seq 0 `expr ${#keys[@]} - 1`); do
   key=${keys[i]}
   key_name=${key_names[i]}
-  fgrep "$key" /home/waggle/.ssh/authorized_keys
+  fgrep "$key" /root/.ssh/authorized_keys
   print_result "$key_name Auth" $? 0 1
 done
 
@@ -86,8 +86,8 @@ for unit in ${units[@]}; do
   print_result "$unit Service" $? 0 1
 done
 
-ssh -i /usr/lib/waggle/SSL/guest/id_rsa_waggle_aot_guest_node waggle@10.31.81.10 \
-    -o "StrictHostKeyChecking no" -o "PasswordAuthentication no" -o "ConnectTimeout 2" /bin/date
+ssh -i /usr/lib/waggle/SSL/guest/id_rsa_waggle_aot_guest_node root@10.31.81.10 \
+    -o "StrictHostKeyChecking no" -o "PasswordAuthentication no" -o "ConnectTimeout 2" /bin/date && true
 print_result "ssh to NC" $? 0 0
 
 devices=('0d8c:013c' '05a3:9830' '05a3:9520')
