@@ -1,6 +1,6 @@
 # interfaces(5) file used by ifup(8) and ifdown(8)
 # Include files from /etc/network/interfaces.d:
-# created by /usr/lib/waggle/guestnode/scripts/configure-system.sh
+# created by /usr/lib/waggle/edge_processor/scripts/configure-system.sh
 
 
 auto lo enx%MAC_STRING%

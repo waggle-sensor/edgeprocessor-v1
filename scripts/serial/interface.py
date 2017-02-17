@@ -5,7 +5,7 @@ import socket
 import subprocess
 
 def process_loop():
-  script_dir = '/usr/lib/waggle/guestnode/scripts'
+  script_dir = '/usr/lib/waggle/edge_processor/scripts'
   for line in fileinput.input():
     try:
       instruction=json.loads(line)

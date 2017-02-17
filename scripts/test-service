@@ -2,7 +2,7 @@
 
 run_tests() {
   echo "Running tests..."
-  /usr/lib/waggle/guestnode/scripts/test_node.sh \
+  /usr/lib/waggle/edge_processor/scripts/test_node.sh \
     > /home/waggle/test_node_EP_${CURRENT_DISK_DEVICE_TYPE}.log
 }
 

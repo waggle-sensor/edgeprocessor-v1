@@ -1,4 +1,4 @@
 waggle ALL=(ALL) NOPASSWD: /usr/bin/python3 /usr/local/bin/interface.py
-waggle ALL=(ALL) NOPASSWD: /usr/lib/waggle/guestnode/scripts/start-test-service
-waggle ALL=(ALL) NOPASSWD: /usr/lib/waggle/guestnode/scripts/run-tests
-waggle ALL=(ALL) NOPASSWD: /usr/lib/waggle/guestnode/scripts/lockdown
+waggle ALL=(ALL) NOPASSWD: /usr/lib/waggle/edge_processor/scripts/start-test-service
+waggle ALL=(ALL) NOPASSWD: /usr/lib/waggle/edge_processor/scripts/run-tests
+waggle ALL=(ALL) NOPASSWD: /usr/lib/waggle/edge_processor/scripts/lockdown

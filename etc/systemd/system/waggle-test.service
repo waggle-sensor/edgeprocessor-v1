@@ -3,8 +3,8 @@ Description=Tests the Waggle extension node.
 After=waggle-init.service
 
 [Service]
-WorkingDirectory=/usr/lib/waggle/guestnode/
-ExecStart=/usr/lib/waggle/guestnode/scripts/test-service
+WorkingDirectory=/usr/lib/waggle/edge_processor/
+ExecStart=/usr/lib/waggle/edge_processor/scripts/test-service
 
 [Install]
 WantedBy=multi-user.target
