@@ -33,6 +33,9 @@ pip3 install git+https://github.com/waggle-sensor/pywaggle
 cp ${current_dir}/etc/systemd/system/* /etc/systemd/system
 systemctl enable waggle-test.service
 
+# copy udev rules
+cp ${current_dir}/etc/udev/rules.d/* /etc/udev/rules.d
+
 rm -f /usr/local/bin/interface.py
 ln -s ${current_dir}/scripts/serial/interface.py /usr/local/bin/interface.py
 
