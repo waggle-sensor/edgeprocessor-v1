@@ -1,5 +1,5 @@
 [Unit]
-Description=Tests the Waggle extension node.
+Description=brain tests for the Waggle Edge Processor
 After=waggle-init.service
 
 [Service]
