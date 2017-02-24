@@ -40,4 +40,4 @@ ln -s ${current_dir}/scripts/serial/interface.py /usr/local/bin/interface.py
 # set script permissions
 cd ${current_dir}/scripts
 chmod 700 *
-chmod 744 test_node.sh
+chmod 744 testing/*
