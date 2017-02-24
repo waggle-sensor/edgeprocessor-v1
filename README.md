@@ -1,4 +1,4 @@
-# guestnode
+# edge_processor
 configuration and services specific to the Guest Node
 
 # Installation of OpenCL for Mali T-62X

@@ -22,12 +22,22 @@ if [ $CONFIGURE_SYSTEM -eq 1 ]; then
   cd $current_dir
 fi
 
-apt-get --no-install-recommends install -y network-manager
-apt-get autoclean
-apt-get autoremove -y
+# Why are we doing this?
+# apt-get --no-install-recommends install -y network-manager
+# apt-get autoclean
+# apt-get autoremove -y
 
-pip install git+https://github.com/waggle-sensor/pywaggle
-pip3 install git+https://github.com/waggle-sensor/pywaggle
-
-cp ${current_dir}/systemd/* /etc/systemd/system
+# copy systemd scripts
+cp ${current_dir}/etc/systemd/system/* /etc/systemd/system
 systemctl enable waggle-test.service
+
+# copy udev rules
+cp ${current_dir}/etc/udev/rules.d/* /etc/udev/rules.d
+
+rm -f /usr/local/bin/interface.py
+ln -s ${current_dir}/scripts/serial/interface.py /usr/local/bin/interface.py
+
+# set script permissions
+cd ${current_dir}/scripts
+chmod 700 *
+chmod 744 testing/*

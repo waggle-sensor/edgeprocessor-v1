@@ -1,0 +1,10 @@
+[Unit]
+Description=brain tests for the Waggle Edge Processor
+After=waggle-init.service
+
+[Service]
+WorkingDirectory=/usr/lib/waggle/edge_processor/
+ExecStart=/usr/lib/waggle/edge_processor/scripts/test-service
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,6 @@
+#!/bin/bash
+skip_frames=20
+mkdir -p /root/camera/
+fswebcam -d /dev/video0 -S $skip_frames --subtitle $(hostname) -r 3264x2448 --jpeg -1 -D 0 /root/camera/c0_$(hostname)_$(date +%s).jpg
+fswebcam -d /dev/video1 -S $skip_frames --subtitle $(hostname) -r 3264x2448 --jpeg -1 -D 0 /root/camera/c1_$(hostname)_$(date +%s).jpg
+

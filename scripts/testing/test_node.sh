@@ -34,27 +34,27 @@ shadow='root:$6$D3j0Te22$md6NULvJPliwvAhK2BlL96XCsJ0KdTnPqNdufDWgyU5k6Nc3M88qO64
 fgrep $shadow /etc/shadow
 print_result "AoT Root Password Set" $? 0 1
 
-keys=('from="10.31.81.0/24" ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4ohQv1Qksg2sLIqpvjJuZEsIkeLfbPusEaJQerRCqI71g8hwBkED3BBv5FehLcezTg+cFJFhf2vBGV5SbV0NzbouIM+n0lAr6+Ei/XYjO0B1juDm6cUmloD4HSzQWv+cSyNmb7aXjup7V0GP1DZH3zlmvwguhMUTDrWxQxDpoV28m72aZ4qPH7VmQIeN/JG3BF9b9F8P4myOPGuk5XTjY1rVG+1Tm2mxw0L3WuL6w3DsiUrvlXsGE72KcyFBDiFqOHIdnIYWXDLZz61KXctVLPVLMevwU0YyWg70F9pb0d2LZt7Ztp9GxXBRj5WnU9IClaRh58RsYGhPjdfGuoC3P AoT_guest_node_key')
+keys=('from="10.31.81.0/24" ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4ohQv1Qksg2sLIqpvjJuZEsIkeLfbPusEaJQerRCqI71g8hwBkED3BBv5FehLcezTg+cFJFhf2vBGV5SbV0NzbouIM+n0lAr6+Ei/XYjO0B1juDm6cUmloD4HSzQWv+cSyNmb7aXjup7V0GP1DZH3zlmvwguhMUTDrWxQxDpoV28m72aZ4qPH7VmQIeN/JG3BF9b9F8P4myOPGuk5XTjY1rVG+1Tm2mxw0L3WuL6w3DsiUrvlXsGE72KcyFBDiFqOHIdnIYWXDLZz61KXctVLPVLMevwU0YyWg70F9pb0d2LZt7Ztp9GxXBRj5WnU9IClaRh58RsYGhPjdfGuoC3P AoT_edge_processor_key')
 echo ${keys[@]}
 key_names=('AoT Guest Key')
 for i in $(seq 0 `expr ${#keys[@]} - 1`); do
   key=${keys[i]}
   key_name=${key_names[i]}
-  fgrep "$key" /home/waggle/.ssh/authorized_keys
+  fgrep "$key" /root/.ssh/authorized_keys
   print_result "$key_name Auth" $? 0 1
 done
 
 grep '^sudo:x:27:$' /etc/group
 print_result "sudo Disabled" $? 0 1
 
-directories=("/etc/waggle" "/usr/lib/waggle" "/usr/lib/waggle/core" "/usr/lib/waggle/plugin_manager" "/usr/lib/waggle/guestnode" \
-             "/usr/lib/waggle/SSL" "/usr/lib/waggle/SSL/guest")
+directories=("/etc/waggle" "/usr/lib/waggle" "/usr/lib/waggle/core" "/usr/lib/waggle/plugin_manager" "/usr/lib/waggle/edge_processor" \
+             "/usr/lib/waggle/SSL" "/usr/lib/waggle/SSL/edge_processor")
 for dir in ${directories[@]}; do
   [ -e $dir ]
   print_result "$dir Directory" $? 0 1
 done
 
-perms=$(stat -c '%U %G %a' /usr/lib/waggle/SSL/guest/id_rsa_waggle_aot_guest_node)
+perms=$(stat -c '%U %G %a' /usr/lib/waggle/SSL/edge_processor/id_rsa_waggle_aot_edge_processor)
 [ "$perms" == "root root 600" ]
 print_result "Guest Key Permissions" $? 0 1
 
@@ -64,9 +64,6 @@ print_result "Built-in Ethernet IP Address" $? 0 0
 line_count=$(cat /etc/ssh/sshd_config | fgrep -e 'ListenAddress 127.0.0.1' -e 'ListenAddress 10.31.81.51' | wc -l)
 [ $line_count -eq 2 ]
 print_result "sshd Listen Addresses" $? 0 1
-
-cat /etc/ssh/sshd_config | fgrep 'PermitRootLogin no' && true
-print_result "sshd No Root Login" $? 0 1
 
 cat /etc/waggle/node_id | egrep '[0-9a-f]{16}' && true
 print_result "Node ID Set" $? 0 1
@@ -89,8 +86,8 @@ for unit in ${units[@]}; do
   print_result "$unit Service" $? 0 1
 done
 
-ssh -i /usr/lib/waggle/SSL/guest/id_rsa_waggle_aot_guest_node waggle@10.31.81.10 \
-    -o "StrictHostKeyChecking no" -o "PasswordAuthentication no" -o "ConnectTimeout 2" /bin/date
+ssh -i /usr/lib/waggle/SSL/edge_processor/id_rsa_waggle_aot_edge_processor root@10.31.81.10 \
+    -o "StrictHostKeyChecking no" -o "PasswordAuthentication no" -o "ConnectTimeout 2" /bin/date && true
 print_result "ssh to NC" $? 0 0
 
 devices=('0d8c:013c' '05a3:9830' '05a3:9520')
