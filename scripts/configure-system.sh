@@ -11,6 +11,9 @@ echo -e "10.31.81.10\tnodecontroller" >> /etc/hosts
 sed -i 's/^#ListenAddress ::$/ListenAddress 127.0.0.1/' /etc/ssh/sshd_config
 sed -i 's/^#ListenAddress 0.0.0.0$/ListenAddress 10.31.81.51/' /etc/ssh/sshd_config 
 
+# disable all password authentication
+sed -i 's/^#PasswordAuthentication yes$/PasswordAuthentication no/' /etc/ssh/sshd_config
+
 # NetworkManager will try to manage any interfaces *not* listed in
 # /etc/network/interfaces, so just replace it with what we want
 cp ${script_dir}/../etc/network/interfaces /etc/network/interfaces
