@@ -47,12 +47,3 @@ print_result "SD Size" $? 0 0
 
 parted -s ${OTHER_DISK_DEVICE}p2 print | grep --color=never -e ext | awk '{print $3}' | egrep '15\.[0-9]GB' && true
 print_result "eMMC Size" $? 0 0
-
-devices=('0d8c:013c' '05a3:9830' '05a3:9520')
-device_names=('Microphone' 'Top Camera' 'Bottom Camera')
-for i in $(seq 0 `expr ${#devices[@]} - 1`); do
-  device=${devices[i]}
-  device_name=${device_names[i]}
-  lsusb | grep $device && true
-  print_result "$device_name USB Device" $? 1
-done
