@@ -38,7 +38,3 @@ for i in $(seq 0 `expr ${#devices[@]} - 1`); do
   lsusb | grep $device && true
   print_result "$device_name USB Device" $? 1
 done
-
-ssh -i /usr/lib/waggle/SSL/edge_processor/id_rsa_waggle_aot_edge_processor root@10.31.81.10 \
-    -o "StrictHostKeyChecking no" -o "PasswordAuthentication no" -o "ConnectTimeout 2" /bin/date && true
-print_result "ssh to NC" $? 0 0
