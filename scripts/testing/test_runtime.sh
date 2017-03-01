@@ -30,20 +30,16 @@ print_result() {
   fi
 }
 
-# USB Breakout Board
-test_device_count=$(ls -1 /dev/waggle_brain_test* | wc -l)
-expected_device_count=2
-if [ ${test_device_count} -eq ${expected_device_count} ]; then
-  print_result "Detected USB test devices" 0 0 0
-else
-  print_result "Detected USB test devices" 1 0 0
-fi
+cat /etc/waggle/node_id | egrep '[0-9a-f]{16}' && true
+print_result "Node ID Set" $? 0 1
 
-ifconfig | fgrep "          inet addr:10.31.81.51  Bcast:10.31.81.255  Mask:255.255.255.0" && true
-print_result "Built-in Ethernet IP Address" $? 0 0
+. /usr/lib/waggle/core/scripts/detect_mac_address.sh
+. /usr/lib/waggle/core/scripts/detect_disk_devices.sh
+cat /etc/hostname | fgrep "${MAC_STRING}${CURRENT_DISK_DEVICE_TYPE}" && true
+print_result "Hostname Set" $? 0 1
 
-parted -s ${CURRENT_DISK_DEVICE}p2 print | grep --color=never -e ext | awk '{print $3}' | egrep '15\.[0-9]GB' && true
-print_result "SD Size" $? 0 0
-
-parted -s ${OTHER_DISK_DEVICE}p2 print | grep --color=never -e ext | awk '{print $3}' | egrep '15\.[0-9]GB' && true
-print_result "eMMC Size" $? 0 0
+units=("waggle-epoch" "waggle-heartbeat")
+for unit in ${units[@]}; do
+  systemctl status $unit | fgrep 'Active: active (running)' && true
+  print_result "$unit Service" $? 0 1
+done

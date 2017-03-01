@@ -30,20 +30,11 @@ print_result() {
   fi
 }
 
-# USB Breakout Board
-test_device_count=$(ls -1 /dev/waggle_brain_test* | wc -l)
-expected_device_count=2
-if [ ${test_device_count} -eq ${expected_device_count} ]; then
-  print_result "Detected USB test devices" 0 0 0
-else
-  print_result "Detected USB test devices" 1 0 0
-fi
-
-ifconfig | fgrep "          inet addr:10.31.81.51  Bcast:10.31.81.255  Mask:255.255.255.0" && true
-print_result "Built-in Ethernet IP Address" $? 0 0
-
-parted -s ${CURRENT_DISK_DEVICE}p2 print | grep --color=never -e ext | awk '{print $3}' | egrep '15\.[0-9]GB' && true
-print_result "SD Size" $? 0 0
-
-parted -s ${OTHER_DISK_DEVICE}p2 print | grep --color=never -e ext | awk '{print $3}' | egrep '15\.[0-9]GB' && true
-print_result "eMMC Size" $? 0 0
+devices=('0d8c:013c' '05a3:9830' '05a3:9520')
+device_names=('Microphone' 'Top Camera' 'Bottom Camera')
+for i in $(seq 0 `expr ${#devices[@]} - 1`); do
+  device=${devices[i]}
+  device_name=${device_names[i]}
+  lsusb | grep $device && true
+  print_result "$device_name USB Device" $? 1
+done
