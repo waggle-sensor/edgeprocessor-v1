@@ -42,6 +42,7 @@ fi
 ifconfig | fgrep "          inet addr:10.31.81.51  Bcast:10.31.81.255  Mask:255.255.255.0" && true
 print_result "Built-in Ethernet IP Address" $? 0 0
 
+. /usr/lib/waggle/core/scripts/detect_disk_devices.sh
 parted -s ${CURRENT_DISK_DEVICE}p2 print | grep --color=never -e ext | awk '{print $3}' | egrep '15\.[0-9]GB' && true
 print_result "SD Size" $? 0 0
 
