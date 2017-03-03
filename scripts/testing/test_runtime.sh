@@ -40,6 +40,6 @@ print_result "Hostname Set" $? 0 1
 
 units=("waggle-heartbeat" "waggle-core.target" "waggle-platform.target")
 for unit in ${units[@]}; do
-  systemctl status $unit | fgrep 'Active: active (running)' && true
+  systemctl status $unit | fgrep 'Active: active' && true
   print_result "$unit Service" $? 0 1
 done
