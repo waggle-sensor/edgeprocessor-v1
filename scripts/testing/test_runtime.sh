@@ -38,8 +38,8 @@ print_result "Node ID Set" $? 0 1
 cat /etc/hostname | fgrep "${MAC_STRING}${CURRENT_DISK_DEVICE_TYPE}" && true
 print_result "Hostname Set" $? 0 1
 
-units=("waggle-epoch" "waggle-heartbeat")
+units=("waggle-heartbeat" "waggle-core.target" "waggle-platform.target")
 for unit in ${units[@]}; do
-  systemctl status $unit | fgrep 'Active: active (running)' && true
+  systemctl status $unit | fgrep 'Active: active' && true
   print_result "$unit Service" $? 0 1
 done
