@@ -45,7 +45,7 @@ def main():
         config = capture_config['bottom']
       # 5a)   grab camera image
       command = ['/usr/bin/fswebcam', '-d', camera_device, '-S', str(config['skip_frames']),
-                 '-r', config['resolution'], '--jpeg', '-q', '-D', '0']
+                 '-r', config['resolution'], '--no-banner', '--jpeg', '-q', '-D', '0', '-q', '-']
       image = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).communicate()[0]
 
       # 5b)   annotate and send image to exchange
