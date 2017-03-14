@@ -27,6 +27,9 @@ fi
 # apt-get autoclean
 # apt-get autoremove -y
 
+# install RabbitMQ configuration
+cp -r ${current_dir}/etc/rabbitmq /etc
+
 # copy systemd scripts
 cp ${current_dir}/etc/systemd/system/* /etc/systemd/system
 systemctl enable waggle-test.service
