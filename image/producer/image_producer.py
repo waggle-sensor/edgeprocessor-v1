@@ -30,26 +30,30 @@ def main():
   channel.exchange_delete(exchange='image_pipeline')
   channel.exchange_declare(exchange='image_pipeline', type='direct')
 
-  while True:
-    for camera_device in camera_devices:
-      config = {}
-      if 'top' in camera_device:
-        config = capture_config['top']
-      else:
-        config = capture_config['bottom']
+  try:
+    while True:
+      for camera_device in camera_devices:
+        config = {}
+        if 'top' in camera_device:
+          config = capture_config['top']
+        else:
+          config = capture_config['bottom']
 
-      command = ['/usr/bin/fswebcam', '-d', camera_device, '-S', str(config['skip_frames']),
-                 '-r', config['resolution'], '--no-banner', '--jpeg', '-1', '-D', '0', '-q', '-']
-      image = str(base64.b64encode(subprocess.check_output(command)))
+        command = ['/usr/bin/fswebcam', '-d', camera_device, '-S', str(config['skip_frames']),
+                   '-r', config['resolution'], '--no-banner', '--jpeg', '-1', '-D', '0', '-q', '-']
+        image = str(base64.b64encode(subprocess.check_output(command)))
 
-      timestamp = str(int(time.time()))
-      message = {'results':[timestamp,], 'image':image }
-      channel.basic_publish(exchange='image_pipeline', routing_key='0', body=json.dumps(message))
-    time.sleep(config['interval'])
-  
+        timestamp = str(int(time.time()))
+        message = {'results':[timestamp,], 'image':image }
+        channel.basic_publish(exchange='image_pipeline', routing_key='0', body=json.dumps(message))
+      time.sleep(config['interval'])
+  except KeyboardInterrupt:
+    channel.stop_consuming()
+  connection.close()
+
   # TODO:
   # 1) add RPC control of configuration
-  # 2) handle SIGTERM and keyboard signals nicely
+  # 2) handle SIGTERM signals
 
 if __name__ == '__main__':
   main()
