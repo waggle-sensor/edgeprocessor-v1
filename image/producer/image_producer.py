@@ -22,7 +22,8 @@ def main():
     with open(capture_config_file) as config:
       capture_config = json.loads(config.read())
   else:
-    capture_config = {'top':{'resolution':'3264x2440', 'skip_frames':20, 'interval':60}}
+    capture_config = {'top':{'resolution':'3264x2440', 'skip_frames':20, 'interval':60},
+                      'bottom':{'resolution':'3264x2440', 'skip_frames':20, 'interval':60}}
     with open(capture_config_file, 'w') as config:
       config.write(json.dumps(capture_config))
 
@@ -35,9 +36,14 @@ def main():
   while True:
     # 5) for each camera
     for camera_device in camera_devices:
+      config = {}
+      if 'top' in camera_device:
+        config = capture_config['top']
+      else:
+        config = capture_config['bottom']
       # 5a)   grab camera image
-      command = ['/usr/bin/fswebcam', '-d', camera_device, '-S', str(capture_config['skip_frames']),
-                 '-r', capture_config['resolution'], '--jpeg', '-q', '-D', '0']
+      command = ['/usr/bin/fswebcam', '-d', camera_device, '-S', str(config['skip_frames']),
+                 '-r', config['resolution'], '--jpeg', '-q', '-D', '0']
       image = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).communicate()[0]
 
       # 5b)   annotate and send image to exchange
@@ -45,7 +51,7 @@ def main():
       message = {'results':[timestamp,], 'image':base64.b64encode(image) }
       channel.basic_publish(exchange='image_pipeline', routing_key='', body=json.dumps(message))
     # 6) sleep for configured capture interval
-    time.sleep(capture_config['interval'])
+    time.sleep(config['interval'])
   
   # TODO:
   # 1) add RPC control of configuration
