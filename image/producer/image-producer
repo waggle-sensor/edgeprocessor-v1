@@ -41,7 +41,7 @@ def main():
 
       # 5b)   annotate and send image to exchange
       timestamp = str(int(time.time()))
-      message = { 'stage':0, 'results':[timestamp,], 'image':base64.b64encode(image) }
+      message = {'results':[timestamp,], 'image':base64.b64encode(image) }
       channel.basic_publish(exchange='image_pipeline', routing_key='', body=json.dumps(message))
     # 6) sleep for configured capture interval
     time.sleep(capture_config['interval'])
