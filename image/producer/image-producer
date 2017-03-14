@@ -1,0 +1,10 @@
+import json
+import os
+import subprocess
+
+def main():
+  script_dir = os.path.dirname(os.path.abspath(__file__))
+  output = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).communicate()[0]
+
+if __name__ == '__main__':
+  main()
