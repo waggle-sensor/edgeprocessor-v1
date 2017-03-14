@@ -27,9 +27,10 @@ def main():
 
   connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
   channel = connection.channel()
-  channel.exchange_declare(exchange='image_pipeline', type='headers')
+  channel.exchange_delete(exchange='image_pipeline')
+  channel.exchange_declare(exchange='image_pipeline', type='direct')
 
-  properties = pika.BasicProperties(headers = {'stage':0})
+  # properties = pika.BasicProperties(headers = {'stage':0})
 
   while True:
     for camera_device in camera_devices:
@@ -45,7 +46,7 @@ def main():
 
       timestamp = str(int(time.time()))
       message = {'results':[timestamp,], 'image':image }
-      channel.basic_publish(exchange='image_pipeline', routing_key='', body=json.dumps(message),
+      channel.basic_publish(exchange='image_pipeline', routing_key='0', body=json.dumps(message),
                             properties=properties)
     time.sleep(config['interval'])
   
