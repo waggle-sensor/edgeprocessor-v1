@@ -27,7 +27,7 @@ def main():
       config.write(json.dumps(capture_config))
 
   # 3) create "image_pipeline" fanout exchange
-  connection = pika.BlockingConnection(pika.ConnctionParameters('localhost'))
+  connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
   channel = connection.channel()
   channel.exchange_declare(exchange='image_pipeline', type='fanout')
 
