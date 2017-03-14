@@ -13,6 +13,8 @@ def main():
 
   # 1) determine available video devices (/dev/waggle_cam_top and /dev/waggle_cam_bottom for now)
   camera_devices = glob.glob('/dev/waggle_cam_*')
+  if len(camera_devices) == 0:
+    raise Exception('no available cameras detected')
 
   # 2) read image capture configuration from /etc/waggle/image_capture.conf, or
   #    create a default configuration if non-existent
