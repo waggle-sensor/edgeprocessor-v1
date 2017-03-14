@@ -37,7 +37,7 @@ def main():
 
   connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
   channel = connection.channel()
-  channel.exchange_declare(exchange='image_pipeline', type='fanout')
+  channel.exchange_declare(exchange='image_pipeline', type='headers')
   queue = channel.queue_declare(exclusive=True)
   channel.queue_bind(exchange='image_pipeline', queue=queue.method.queue, routing_key='',
                      arguments = {'stage':export_stage, 'x-match':'any'})
