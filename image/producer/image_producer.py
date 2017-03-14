@@ -30,8 +30,6 @@ def main():
   channel.exchange_delete(exchange='image_pipeline')
   channel.exchange_declare(exchange='image_pipeline', type='direct')
 
-  # properties = pika.BasicProperties(headers = {'stage':0})
-
   while True:
     for camera_device in camera_devices:
       config = {}
@@ -46,8 +44,7 @@ def main():
 
       timestamp = str(int(time.time()))
       message = {'results':[timestamp,], 'image':image }
-      channel.basic_publish(exchange='image_pipeline', routing_key='0', body=json.dumps(message),
-                            properties=properties)
+      channel.basic_publish(exchange='image_pipeline', routing_key='0', body=json.dumps(message))
     time.sleep(config['interval'])
   
   # TODO:
