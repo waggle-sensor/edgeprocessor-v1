@@ -40,7 +40,7 @@ def main():
 
       command = ['/usr/bin/fswebcam', '-d', camera_device, '-S', str(config['skip_frames']),
                  '-r', config['resolution'], '--no-banner', '--jpeg', '-1', '-D', '0', '-q', '-']
-      image = image = base64.b64encode(subprocess.check_output(command))
+      image = str(base64.b64encode(subprocess.check_output(command)))
 
       timestamp = str(int(time.time()))
       message = {'results':[timestamp,], 'image':image }
