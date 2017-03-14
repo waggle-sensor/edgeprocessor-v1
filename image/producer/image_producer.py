@@ -9,7 +9,6 @@ import time
 
 def main():
   script_dir = os.path.dirname(os.path.abspath(__file__))
-  #output = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).communicate()[0]
 
   camera_devices = glob.glob('/dev/waggle_cam_*')
   if len(camera_devices) == 0:
@@ -28,7 +27,9 @@ def main():
 
   connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
   channel = connection.channel()
-  channel.exchange_declare(exchange='image_pipeline', type='fanout')
+  channel.exchange_declare(exchange='image_pipeline', type='headers')
+
+  properties = pika.BasicProperties(headers = {'stage':0})
 
   while True:
     for camera_device in camera_devices:
@@ -44,7 +45,8 @@ def main():
 
       timestamp = str(int(time.time()))
       message = {'results':[timestamp,], 'image':image }
-      channel.basic_publish(exchange='image_pipeline', routing_key='', body=json.dumps(message))
+      channel.basic_publish(exchange='image_pipeline', routing_key='', body=json.dumps(message),
+                            properties=properties)
     time.sleep(config['interval'])
   
   # TODO:
