@@ -3,6 +3,7 @@ import glob
 import json
 import os
 import os.path
+import pika
 import subprocess
 import time
 
