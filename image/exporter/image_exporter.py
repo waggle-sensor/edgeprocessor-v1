@@ -5,10 +5,13 @@ import pika
 import time
 
 def process_image(channel, method, properties, body):
+  logging.info(" [x] pushing image to export queue...")
   channel.basic_publish(exchange='', routing_key='images', body=body, properties=properties)
 
 
 def main():
+  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
   script_dir = os.path.dirname(os.path.abspath(__file__))
 
   export_stage_path = '/etc/waggle/export_stage'

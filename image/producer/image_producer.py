@@ -58,7 +58,7 @@ def main():
 
         timestamp = str(int(time.time()))
         logging.info("inserting {} camera image into processing pipeline...".format(cam_location))
-        message = {'results':[{'timestamp':timestamp,'node_id':node_id},], 'image':image }
+        message = {'results':[{'timestamp':timestamp,'node_id':node_id,'cam_location':cam_location},], 'image':image }
         channel.basic_publish(exchange='image_pipeline', routing_key='0', body=json.dumps(message))
       time.sleep(config['interval'])
   except KeyboardInterrupt:
