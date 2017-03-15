@@ -1,6 +1,7 @@
 import base64
 import glob
 import json
+import logging
 import os
 import os.path
 import pika
@@ -8,6 +9,8 @@ import subprocess
 import time
 
 def main():
+  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
   script_dir = os.path.dirname(os.path.abspath(__file__))
 
   camera_devices = glob.glob('/dev/waggle_cam_*')
@@ -40,10 +43,13 @@ def main():
     while True:
       for camera_device in camera_devices:
         config = {}
+        cam_location = ''
         if 'top' in camera_device:
           config = capture_config['top']
+          cam_location = 'top'
         else:
           config = capture_config['bottom']
+          cam_location = 'bottom'
 
         command = ['/usr/bin/fswebcam', '-d', camera_device, '-S', str(config['skip_frames']),
                    '-r', config['resolution'], '--no-banner', '--jpeg', str(config['factor']),
@@ -51,6 +57,7 @@ def main():
         image = str(base64.b64encode(subprocess.check_output(command)))
 
         timestamp = str(int(time.time()))
+        logging.info("inserting {} camera image into processing pipeline...".format(cam_location))
         message = {'results':[{'timestamp':timestamp,'node_id':node_id},], 'image':image }
         channel.basic_publish(exchange='image_pipeline', routing_key='0', body=json.dumps(message))
       time.sleep(config['interval'])
