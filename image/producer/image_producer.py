@@ -27,6 +27,10 @@ def main():
     with open(capture_config_file, 'w') as config:
       config.write(json.dumps(capture_config))
 
+
+  command = ['arp', '-a', '10.31.81.10', '|', 'awk', '{print $4}', '|', 'sed', 's/://g']
+  node_id = str(subprocess.check_output(command))
+
   connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
   channel = connection.channel()
   channel.exchange_delete(exchange='image_pipeline')
@@ -47,7 +51,7 @@ def main():
         image = str(base64.b64encode(subprocess.check_output(command)))
 
         timestamp = str(int(time.time()))
-        message = {'results':[timestamp,], 'image':image }
+        message = {'results':[{'timestamp':timestamp,'node_id':node_id},], 'image':image }
         channel.basic_publish(exchange='image_pipeline', routing_key='0', body=json.dumps(message))
       time.sleep(config['interval'])
   except KeyboardInterrupt:
