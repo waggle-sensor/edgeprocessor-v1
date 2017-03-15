@@ -3,7 +3,7 @@ Description=Image Exporter
 After=waggle-platform.target
 
 [Service]
-ExecStart=/usr/bin/python3 -u /usr/lib/waggle/edge_processor/image/producer/image_exporter.py
+ExecStart=/usr/bin/python3 -u /usr/lib/waggle/edge_processor/image/exporter/image_exporter.py
 
 Restart=always
 RestartSec=10
