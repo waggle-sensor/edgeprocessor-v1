@@ -24,7 +24,7 @@ def main():
   queue = channel.queue_declare(exclusive=True)
   channel.queue_bind(exchange='image_pipeline', queue=queue.method.queue,
                      routing_key=export_stage)
-  channel.queue_declare(queue='images')
+  channel.queue_declare(queue='images', arguments={"x-max-length:32"})
 
   channel.basic_consume(process_image, queue=queue.method.queue, no_ack=True)
   try:

@@ -20,8 +20,11 @@ def main():
     with open(capture_config_file) as config:
       capture_config = json.loads(config.read())
   else:
-    capture_config = {'top':{'resolution':'3264x2440', 'skip_frames':20, 'interval':60},
-                      'bottom':{'resolution':'3264x2440', 'skip_frames':20, 'interval':60}}
+    # Available Resolutions:
+    # top: 3264x2448, 2592x1944, 2048x1536, 1600x1200, 1280x960, 1024x768, 800x600, 640x480, 320x240
+    # bottomw: 2592x1944, 2048x1536, 1920x1080, 1600x1200, 1280x1024, 1024x768, 800x600, 640x480, 320x240
+    capture_config = {'top':{'resolution':'3264x2440', 'skip_frames':16, 'interval':60},
+                      'bottom':{'resolution':'2592x1944', 'skip_frames':16, 'interval':60}}
     with open(capture_config_file, 'w') as config:
       config.write(json.dumps(capture_config))
 
