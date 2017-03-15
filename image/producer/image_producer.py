@@ -42,7 +42,7 @@ def main():
           config = capture_config['bottom']
 
         command = ['/usr/bin/fswebcam', '-d', camera_device, '-S', str(config['skip_frames']),
-                   '-r', config['resolution'], '--no-banner', '--jpeg', config['factor'],
+                   '-r', config['resolution'], '--no-banner', '--jpeg', str(config['factor']),
                    '-D', '0', '-q', '-']
         image = str(base64.b64encode(subprocess.check_output(command)))
 
