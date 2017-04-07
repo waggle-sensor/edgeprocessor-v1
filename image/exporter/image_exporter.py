@@ -26,6 +26,11 @@ def main():
   channel = connection.channel()
   channel.exchange_declare(exchange='image_pipeline', type='direct')
   queue = channel.queue_declare(exclusive=True)
+
+  # Binding consistently fails on a clean RMQ broker unless
+  # a small delay is introduced between declarations and binding
+  time.sleep(1)
+
   channel.queue_bind(exchange='image_pipeline', queue=queue.method.queue,
                      routing_key=export_stage)
   channel.queue_declare(queue='images', arguments={"x-max-length":32})
