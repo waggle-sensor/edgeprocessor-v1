@@ -36,7 +36,7 @@ def main():
 
   connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
   channel = connection.channel()
-  channel.exchange_delete(exchange='image_pipeline')
+  # channel.exchange_delete(exchange='image_pipeline')
   channel.exchange_declare(exchange='image_pipeline', type='direct')
 
   try:
