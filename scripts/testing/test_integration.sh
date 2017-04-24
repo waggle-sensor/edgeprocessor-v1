@@ -53,8 +53,6 @@ device_names=('Top Camera' 'Bottom Camera')
 for i in $(seq 0 `expr ${#devices[@]} - 1`); do
   device=${devices[i]}
   device_name=${device_names[i]}
-  ls /dev/$device
-  fswebcam -d $device -q - | wc -c
   # the camera should return an image that is at a bare minimum 1K in size
   expr $(fswebcam -d /dev/$device -q - | wc -c) > 1000
   print_result "$device_name Device Image Capture" $? 1
