@@ -35,6 +35,27 @@ device_names=('Microphone' 'Top Camera' 'Bottom Camera')
 for i in $(seq 0 `expr ${#devices[@]} - 1`); do
   device=${devices[i]}
   device_name=${device_names[i]}
-  lsusb | grep $device && true
-  print_result "$device_name USB Device" $? 1
+  lsusb | grep $device
+  print_result "$device_name USB Device Exists" $? 1
+done
+
+devices=('waggle_microphone' 'waggle_cam_top' 'waggle_cam_bottom')
+device_names=('Microphone' 'Top Camera' 'Bottom Camera')
+for i in $(seq 0 `expr ${#devices[@]} - 1`); do
+  device=${devices[i]}
+  device_name=${device_names[i]}
+  ls /dev/$device
+  print_result "$device_name Device Symlink Exists" $? 1
+done
+
+devices=('waggle_cam_top' 'waggle_cam_bottom')
+device_names=('Top Camera' 'Bottom Camera')
+for i in $(seq 0 `expr ${#devices[@]} - 1`); do
+  device=${devices[i]}
+  device_name=${device_names[i]}
+  ls /dev/$device
+  fswebcam -d $device -q - | wc -c
+  # the camera should return an image that is at a bare minimum 1K in size
+  expr $(fswebcam -d /dev/$device -q - | wc -c) > 1000
+  print_result "$device_name Device Image Capture" $? 1
 done
