@@ -57,3 +57,6 @@ for i in $(seq 0 `expr ${#devices[@]} - 1`); do
   expr $(fswebcam -d /dev/$device -S 5 -q - | wc -c) > 1000
   print_result "$device_name Device Image Capture" $? 1
 done
+
+expr $(arecord -q -d 1 -f S16_LE | wc -c) > 10000 
+print_result "Microphone Device Audio Capture" $? 1
