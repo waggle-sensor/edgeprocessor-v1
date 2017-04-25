@@ -40,7 +40,6 @@ for i in $(seq 0 `expr ${#devices[@]} - 1`); do
 done
 
 devices=('waggle_microphone' 'waggle_cam_top' 'waggle_cam_bottom')
-device_names=('Microphone' 'Top Camera' 'Bottom Camera')
 for i in $(seq 0 `expr ${#devices[@]} - 1`); do
   device=${devices[i]}
   device_name=${device_names[i]}
