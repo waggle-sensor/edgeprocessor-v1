@@ -46,3 +46,5 @@ ln -s ${current_dir}/scripts/serial/interface.py /usr/local/bin/interface.py
 cd ${current_dir}/scripts
 chmod 700 *
 chmod 744 testing/*
+
+cp ${current_dir}/home/asoundrc /home/waggle/.asoundrc
