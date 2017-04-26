@@ -47,4 +47,4 @@ cd ${current_dir}/scripts
 chmod 700 *
 chmod 744 testing/*
 
-cp ${current_dir}/home/asoundrc /home/waggle/.asoundrc
+cp ${current_dir}/root/asoundrc /root/.asoundrc
