@@ -7,6 +7,8 @@ import os.path
 import pika
 import subprocess
 import time
+import cv2
+
 
 def main():
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -36,31 +38,49 @@ def main():
 
   connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
   channel = connection.channel()
-  # channel.exchange_delete(exchange='image_pipeline')
+
   channel.exchange_declare(exchange='image_pipeline', type='direct')
+
+  cam_capture = {}
+  for camera_device in camera_devices:
+    try:
+      cap = cv2.VideoCapture(camera_device)
+      config = [capture_config[x] for x in capture_config if x in camera_device]
+      if config is not []:
+        config = config[0]
+        resolution = config['resolution'].split('x')
+        config['width'] = resolution[0]
+        config['height'] = resolution[1]
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
+    except Exception as ex:
+      logging.warning('Could not configure %s: %s' % (camera_device, ex))
+      continue
+    cam_capture[camera_device] = [cap, config, time.time()]
 
   try:
     while True:
-      for camera_device in camera_devices:
-        config = {}
-        cam_location = ''
-        if 'top' in camera_device:
-          config = capture_config['top']
-          cam_location = 'top'
-        else:
-          config = capture_config['bottom']
-          cam_location = 'bottom'
+      for device in cam_capture:
+        cap, config, last_updated = cam_capture[device]
+        current_time = time.time()
+        if current_time - last_updated > config['interval']:
+          last_updated = current_time
+          cam_capture[device] = [cap, config, last_updated]
+          f, frame = cap.read()
+          if f:
+            byte_frame = cv2.imencode('.jpg', frame)[1].tostring()
+            base64_frame = base64.b64encode(byte_frame).decode()
 
-        command = ['/usr/bin/fswebcam', '-d', camera_device, '-S', str(config['skip_frames']),
-                   '-r', config['resolution'], '--no-banner', '--jpeg', str(config['factor']),
-                   '-D', '0', '-q', '-']
-        image = str(base64.b64encode(subprocess.check_output(command)))
-
-        timestamp = str(int(time.time()))
-        logging.info("inserting {} camera image into processing pipeline...".format(cam_location))
-        message = {'results':[{'timestamp':timestamp,'node_id':node_id,'cam_location':cam_location},], 'image':image }
-        channel.basic_publish(exchange='image_pipeline', routing_key='0', body=json.dumps(message))
-      time.sleep(config['interval'])
+            logging.info("inserting {} camera image into processing pipeline...".format(cam_location))
+            message = {'meta_data': {'node_id': node_id,
+                                     'image_width': config['width'],
+                                     'image_height': config['height'],
+                                     'device': device,
+                                     'producer': path.basename(__file__),
+                                     'datetime': time.time()},
+                       'results': [],
+                       'image': base64_frame}
+            channel.basic_publish(exchange='image_pipeline', routing_key='0', body=json.dumps(message))
   except KeyboardInterrupt:
     channel.stop_consuming()
   connection.close()
