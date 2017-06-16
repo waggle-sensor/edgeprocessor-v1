@@ -49,10 +49,10 @@ def main():
       if config is not []:
         config = config[0]
         resolution = config['resolution'].split('x')
-        config['width'] = resolution[0]
-        config['height'] = resolution[1]
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
+        config['width'] = float(resolution[0])
+        config['height'] = float(resolution[1])
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, config['width'])
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config['height'])
     except Exception as ex:
       logging.warning('Could not configure %s: %s' % (camera_device, ex))
       continue
