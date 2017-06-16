@@ -34,9 +34,8 @@ def main():
     with open(capture_config_file, 'w') as config:
       config.write(json.dumps(capture_config))
 
-
-  command = ['arp', '-a', '10.31.81.10', '|', 'awk', '{print $4}', '|', 'sed', 's/://g']
-  node_id = str(subprocess.check_output(command))
+  command = ['arp -a 10.31.81.10 | awk \'{print $4}\' | sed \'s/://g\'']
+  node_id = str(subprocess.getoutput(command))
 
   connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
   channel = connection.channel()
@@ -51,10 +50,10 @@ def main():
       if config is not []:
         config = config[0]
         resolution = config['resolution'].split('x')
-        config['width'] = float(resolution[0])
-        config['height'] = float(resolution[1])
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, config['width'])
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config['height'])
+        config['width'] = resolution[0]
+        config['height'] = resolution[1]
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(config['width']))
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, int(config['height']))
         cam_capture[camera_device] = [cap, config, time.time() - config['interval'], 0]
     except Exception as ex:
       logging.warning('Could not configure %s: %s' % (camera_device, ex))
@@ -77,7 +76,7 @@ def main():
             message = {'meta_data': {'node_id': node_id,
                                      'image_width': config['width'],
                                      'image_height': config['height'],
-                                     'device': device,
+                                     'device': os.path.basename(device),
                                      'producer': os.path.basename(__file__),
                                      'datetime': time.time()},
                        'results': [],
@@ -99,8 +98,9 @@ def main():
   # 2) handle SIGTERM signals
 
 def sigterm_handler(signum, frame):
+  global graceful_signal_to_kill
   graceful_signal_to_kill = True
 
 if __name__ == '__main__':
-  signal.signal(signal.SIGTERM, handler)
+  signal.signal(signal.SIGTERM, sigterm_handler)
   main()

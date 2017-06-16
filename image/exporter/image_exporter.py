@@ -30,16 +30,16 @@ def generate_meta_data(meta_data, results):
   if 'device' in meta_data:
     oth[piexif.ImageIFD.Artist] = meta_data['device']
   if 'producer' in meta_data:
-    oth[piexif.ImageIFD.Software] = producer_name
+    oth[piexif.ImageIFD.Software] = meta_data['producer']
   if 'datetime' in meta_data:
-    oth[piexif.ImageIFD.DateTime] = time.strftime('%Y:%m:%d %H:%M:%S', time.gmttime(meta_data['datetime']))  # last time the image changed
+    oth[piexif.ImageIFD.DateTime] = time.strftime('%Y:%m:%d %H:%M:%S', time.gmtime(meta_data['datetime']))  # last time the image changed
   exif_dict['0th'] = oth
 
   exif = exif_dict['Exif']
   if results is not []:
     exif[piexif.ExifIFD.UserComment] = json.dumps({'results': results})
   # exif[piexif.ExifIFD.DateTimeOriginal] = time.strftime('%Y:%m:%d %H:%M:%S',
-  #                                                       time.gmttime())  # YYYY:MM:DD HH:MM:SS date time
+  #                                                       time.gmtime())  # YYYY:MM:DD HH:MM:SS date time
   exif_dict['Exif'] = exif
   return exif_dict
 
