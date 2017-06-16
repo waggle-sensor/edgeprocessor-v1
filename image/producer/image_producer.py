@@ -8,7 +8,9 @@ import pika
 import subprocess
 import time
 import cv2
+import signal
 
+graceful_signal_to_kill = False
 
 def main():
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -53,19 +55,19 @@ def main():
         config['height'] = float(resolution[1])
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, config['width'])
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config['height'])
+        cam_capture[camera_device] = [cap, config, time.time() - config['interval'], 0]
     except Exception as ex:
       logging.warning('Could not configure %s: %s' % (camera_device, ex))
       continue
-    cam_capture[camera_device] = [cap, config, time.time() - config['interval'], 0]
 
   try:
-    while True:
+    while not graceful_signal_to_kill:
       for device in cam_capture:
         cap, config, last_updated, failure_count = cam_capture[device]
         current_time = time.time()
         if current_time - last_updated > config['interval']:
           last_updated = current_time
-          cam_capture[device] = [cap, config, last_updated]
+          cam_capture[device] = [cap, config, last_updated, failure_count]
           f, frame = cap.read()
           if f:
             byte_frame = cv2.imencode('.jpg', frame)[1].tostring()
@@ -89,12 +91,16 @@ def main():
   connection.close()
 
   for device in cam_capture:
-    cap, config, last_updated = cam_capture[device]
+    cap, config, last_updated, failure_count = cam_capture[device]
     cap.release()
 
   # TODO:
   # 1) add RPC control of configuration
   # 2) handle SIGTERM signals
 
+def sigterm_handler(signum, frame):
+  graceful_signal_to_kill = True
+
 if __name__ == '__main__':
+  signal.signal(signal.SIGTERM, handler)
   main()
