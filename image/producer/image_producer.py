@@ -56,12 +56,12 @@ def main():
     except Exception as ex:
       logging.warning('Could not configure %s: %s' % (camera_device, ex))
       continue
-    cam_capture[camera_device] = [cap, config, time.time()]
+    cam_capture[camera_device] = [cap, config, time.time() - config['interval'], 0]
 
   try:
     while True:
       for device in cam_capture:
-        cap, config, last_updated = cam_capture[device]
+        cap, config, last_updated, failure_count = cam_capture[device]
         current_time = time.time()
         if current_time - last_updated > config['interval']:
           last_updated = current_time
@@ -71,19 +71,26 @@ def main():
             byte_frame = cv2.imencode('.jpg', frame)[1].tostring()
             base64_frame = base64.b64encode(byte_frame).decode()
 
-            logging.info("inserting {} camera image into processing pipeline...".format(cam_location))
+            logging.info("inserting {} camera image into processing pipeline...".format(device))
             message = {'meta_data': {'node_id': node_id,
                                      'image_width': config['width'],
                                      'image_height': config['height'],
                                      'device': device,
-                                     'producer': path.basename(__file__),
+                                     'producer': os.path.basename(__file__),
                                      'datetime': time.time()},
                        'results': [],
                        'image': base64_frame}
             channel.basic_publish(exchange='image_pipeline', routing_key='0', body=json.dumps(message))
+          else:
+            failure_count += 1
+            #TODO: frequent failure of obtaining images needs to be handled here
   except KeyboardInterrupt:
     channel.stop_consuming()
   connection.close()
+
+  for device in cam_capture:
+    cap, config, last_updated = cam_capture[device]
+    cap.release()
 
   # TODO:
   # 1) add RPC control of configuration

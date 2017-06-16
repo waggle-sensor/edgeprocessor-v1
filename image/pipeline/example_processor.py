@@ -1,10 +1,7 @@
 import pika
-import piexif
-from PIL import Image
 import json
 import cv2
 import numpy as np
-import pprint
 import base64
 
 EXCHANGE = 'image_pipeline'

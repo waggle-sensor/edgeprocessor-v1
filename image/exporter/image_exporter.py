@@ -5,6 +5,8 @@ import os.path
 import pika
 import time
 import io
+import base64
+import piexif
 
 null_exif = {
   '0th': {},
@@ -17,8 +19,8 @@ null_exif = {
 
 
 def generate_meta_data(meta_data, results):
-  meta_data = null_exif.copy()
-  oth = meta_data['0th']
+  exif_dict = null_exif.copy()
+  oth = exif_dict['0th']
   if 'image_width' in meta_data:
     oth[piexif.ImageIFD.ImageWidth] = meta_data['image_width']
   if 'image_height' in meta_data:
@@ -31,15 +33,15 @@ def generate_meta_data(meta_data, results):
     oth[piexif.ImageIFD.Software] = producer_name
   if 'datetime' in meta_data:
     oth[piexif.ImageIFD.DateTime] = time.strftime('%Y:%m:%d %H:%M:%S', time.gmttime(meta_data['datetime']))  # last time the image changed
-  meta_data['0th'] = oth
+  exif_dict['0th'] = oth
 
-  exif = meta_data['Exif']
+  exif = exif_dict['Exif']
   if results is not []:
     exif[piexif.ExifIFD.UserComment] = json.dumps({'results': results})
   # exif[piexif.ExifIFD.DateTimeOriginal] = time.strftime('%Y:%m:%d %H:%M:%S',
   #                                                       time.gmttime())  # YYYY:MM:DD HH:MM:SS date time
-  meta_data['Exif'] = exif
-  return meta_data
+  exif_dict['Exif'] = exif
+  return exif_dict
 
 
 def make_image_bytes(meta_data, additional_info, image):
