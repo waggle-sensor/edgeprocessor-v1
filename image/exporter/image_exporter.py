@@ -22,9 +22,9 @@ def generate_meta_data(meta_data, results):
   exif_dict = null_exif.copy()
   oth = exif_dict['0th']
   if 'image_width' in meta_data:
-    oth[piexif.ImageIFD.ImageWidth] = meta_data['image_width']
+    oth[piexif.ImageIFD.ImageWidth] = int(meta_data['image_width'])
   if 'image_height' in meta_data:
-    oth[piexif.ImageIFD.ImageLength] = meta_data['image_height']
+    oth[piexif.ImageIFD.ImageLength] = int(meta_data['image_height'])
   if 'node_id' in meta_data:
     oth[piexif.ImageIFD.Make] = meta_data['node_id']
   if 'device' in meta_data:
