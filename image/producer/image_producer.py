@@ -85,6 +85,7 @@ def main():
           else:
             failure_count += 1
             #TODO: frequent failure of obtaining images needs to be handled here
+        time.sleep(0.1)
   except KeyboardInterrupt:
     channel.stop_consuming()
   connection.close()
