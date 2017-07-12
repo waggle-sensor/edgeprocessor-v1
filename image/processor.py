@@ -2,18 +2,19 @@
 
 import json
 import base64
+import pika
+import queue
 
 class Packet(object):
     META = 'meta_data'
     RESULTS = 'results'
     RAW = 'raw'
     def __init__ (self, binary_packet=None):
-        if binary_packet is not None:
-            load(binary_packet)
-
         self.meta_data = {}
         self.data = []
         self.raw = None
+        if binary_packet is not None:
+            load(binary_packet)
 
     def load(binary_packet):
         packet = json.loads(binary_packet)
@@ -32,7 +33,7 @@ class Packet(object):
         return base64.b64encode(raw)
 
 
-class Streamer(object):
+class Streamer(threading):
     def __init__(self):
         pass
 
@@ -45,6 +46,9 @@ class Streamer(object):
     def write(self, data, **args):
         raise NotImplemented('Write function should be implemented')
 
+    def run(self):
+        raise NotImplemented('Must have run method')
+
 class RabbitMQStreamer(Streamer):
     def __init__(self):
         self.connection = None
@@ -54,7 +58,7 @@ class RabbitMQStreamer(Streamer):
         self.routing_out = None
         self.queue = None
 
-        self.received_packet = Queue(1)
+        self.received_packet = queue.Queue(1)
 
     def open(self, **args):
         pass
@@ -67,7 +71,7 @@ class RabbitMQStreamer(Streamer):
     def connect(self, host='localhost', input_exchange_declare=True):
         try:
             self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=host))
-            self.channel = connection.channel()
+            self.channel = self.connection.channel()
             if input_exchange_declare:
                 self.channel.exchange_declare(exchange=self.exchange, type='direct')
 

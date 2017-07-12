@@ -84,6 +84,7 @@ class Classifier(object):
 
 class PedestrianProcessor(Processor):
     def __init__(self):
+        super().__init__()
         self.options = {
         'camera': None,
         'output': None,
@@ -111,7 +112,7 @@ class PedestrianProcessor(Processor):
         for stream in self.input_handler:
             if stream is None:
                 return False, None
-            return True, streamer.read()
+            return stream.read()
 
     def write(self, packet):
         for stream in self.output_handler:
@@ -127,7 +128,7 @@ class PedestrianProcessor(Processor):
         start_time = time.time()
 
         cap = None
-        if 'camera' in self.options:
+        if self.options['camera'] is not None:
             cap = cv2.VideoCapture(self.options['camera'])
 
         try:
@@ -136,7 +137,8 @@ class PedestrianProcessor(Processor):
                     f, image = cap.read()
                 else:
                     f, packet = self.read()
-                    image = packet.raw
+                    if f:
+                        image = packet.raw
                 if f:
                     founds, weights = self.perform(image)
                     if self.options['output']:
