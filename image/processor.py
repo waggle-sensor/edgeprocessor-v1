@@ -12,7 +12,7 @@ class Packet(object):
             load(binary_packet)
 
         self.meta_data = {}
-        self.data = {}
+        self.data = []
         self.raw = None
 
     def load(binary_packet):
@@ -84,20 +84,9 @@ class RabbitMQStreamer(Streamer):
 
         return True, self.received_packet.get()
 
-    def write(self, data, **args):
-        pass
-
-    def send(self, metadata, results, image):
+    def write(self, data):
         try:
-            if self.current_frame is None:
-                logger.error('There is no frame or information to send')
-                return False
-            if self.routing_key_out is None:
-                logger.error('No destination defined')
-                return False
-
-            frame = {'meta_data': metadata, 'results': results, 'image': image}
-            self.channel.basic_publish(exchange=self.exchange, routing_key=self.routing_key_out, body=frame)
+            self.channel.basic_publish(exchange=self.exchange, routing_key=self.routing_key_out, body=data)
             return True
         except Exception as ex:
             logger.error('Could not send %s' % (str(ex),))

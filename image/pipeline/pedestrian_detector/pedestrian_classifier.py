@@ -83,8 +83,13 @@ class Classifier(object):
 
 
 class PedestrianProcessor(Processor):
-    def __init__(self, option_dict={}):
-        self.options = option_dict
+    def __init__(self):
+        self.options = {
+        'camera': None,
+        'output': None,
+        'verbose': False,
+        'interactive': False
+        }
 
     def add_processor(self, processor):
         self.processor = processor
@@ -104,12 +109,17 @@ class PedestrianProcessor(Processor):
 
     def read(self):
         for stream in self.input_handler:
-            if streamer is not None:
+            if stream is None:
                 return False, None
             return True, streamer.read()
 
     def write(self, packet):
-        print(packet.output())
+        for stream in self.output_handler:
+            if stream is None:
+                return False
+            stream.write(packet.output())
+            if self.options['verbose']:
+                logger.info('A packet is sent to output')
 
     def run(self):
         FPS = 0.
@@ -134,7 +144,7 @@ class PedestrianProcessor(Processor):
 
                     if len(founds) > 0:
                         if packet:
-                            packet.data['pedestrian_detection'] = [founds, weights]
+                            packet.data.append({'pedestrian_detection': [founds, weights]})
                             self.write(packet)
 
                     draw_detections(image, founds, thickness=2)
