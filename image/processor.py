@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+
+import json
+import base64
+
+class Packet(object):
+    META = 'meta_data'
+    RESULTS = 'results'
+    RAW = 'raw'
+    def __init__ (self, binary_packet=None):
+        if binary_packet is not None:
+            load(binary_packet)
+
+        self.meta_data = {}
+        self.data = {}
+        self.raw = None
+
+    def load(binary_packet):
+        packet = json.loads(binary_packet)
+        self.meta_data = packet[META]
+        self.data = packet[RESULTS]
+        self.raw = decode_raw(packet[RAW])
+
+    def output():
+        message = {META: self.meta_data, RESULTS: self.data, RAW: encode_raw(self.raw)}
+        return json.dumps(message)
+
+    def decode_raw(base64_raw):
+        return base64.b64decode(base64_raw)
+
+    def encode_raw(raw):
+        return base64.b64encode(raw)
+
+
+class Streamer(object):
+    def __init__(self):
+        pass
+
+    def open(self, **args):
+        raise NotImplemented('Open function should be implemented')
+
+    def read(self):
+        raise NotImplemented('Read function should be implemented')
+
+    def write(self, data, **args):
+        raise NotImplemented('Write function should be implemented')
+
+class RabbitMQStreamer(Streamer):
+    def __init__(self):
+        self.connection = None
+        self.channel = None
+        self.exchange = None
+        self.routing_in = None
+        self.routing_out = None
+        self.queue = None
+
+        self.received_packet = Queue(1)
+
+    def open(self, **args):
+        pass
+
+    def config(self, input_exchange, routing_key_in='0', routing_key_out=None):
+        self.exchange = input_exchange
+        self.routing_in = routing_key_in
+        self.routing_out = routing_key_out
+
+    def connect(self, host='localhost', input_exchange_declare=True):
+        try:
+            self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=host))
+            self.channel = connection.channel()
+            if input_exchange_declare:
+                self.channel.exchange_declare(exchange=self.exchange, type='direct')
+
+            result = self.channel.queue_declare(exclusive=True)
+            self.queue = result.method.queue
+            self.channel.queue_bind(queue=self.queue, exchange=self.exchange, routing_key=self.routing_in)
+        except Exception as ex:
+            return False, str(ex)
+        return True, ''
+
+    def read(self):
+        if self.received_packet.empty():
+            return False, None
+
+        return True, self.received_packet.get()
+
+    def write(self, data, **args):
+        pass
+
+    def send(self, metadata, results, image):
+        try:
+            if self.current_frame is None:
+                logger.error('There is no frame or information to send')
+                return False
+            if self.routing_key_out is None:
+                logger.error('No destination defined')
+                return False
+
+            frame = {'meta_data': metadata, 'results': results, 'image': image}
+            self.channel.basic_publish(exchange=self.exchange, routing_key=self.routing_key_out, body=frame)
+            return True
+        except Exception as ex:
+            logger.error('Could not send %s' % (str(ex),))
+            return False
+
+    def onReceived(self, ch, method, props, body):
+        try:
+            if self.received_packet.full():
+                self.received_packet.get()
+            self.received_packet.put(Packet(body.decode()))
+        except Exception as ex:
+            logger.error('Could not receive frame %s' % (str(ex),))
+            
+
+    def run(self):
+        if self.channel is None:
+            logger.error('RabbitMQ channel is None')
+            return
+        if not self.channel.is_open:
+            logger.error('RabbitMQ channel is not opened')
+            return
+
+        self.channel.basic_consume(self.onReceived, queue=self.queue, no_ack=True)
+        while True:
+            try:
+                self.channel.start_consuming()
+            except Exception as ex:
+                self.channel.stop_consuming()
+                logger.info('RabbitMQ consumption failed %s' % (str(ex),))
+                logger.info('Restarting RabbitMQ consumption in 5 seconds...')
+                time.sleep(5)
+
+class Processor(object):
+    def __init__(self):
+        self.processor = None
+        self.input_handler = []
+        self.output_handler = []
+
+    def add_handler(self, handler, handler_type='in-out'):
+        if 'in' in handler_type:
+            self.input_handler.append(handler)
+        if 'out' in handler_type:
+            self.output_handler.append(handler)
+
+    def run(self):
+        raise NotImplmented('Run method should be implemented')

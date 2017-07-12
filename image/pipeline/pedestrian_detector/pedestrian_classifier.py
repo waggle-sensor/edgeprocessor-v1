@@ -1,21 +1,26 @@
+#!/usr/bin/env python3
+
 import cv2
 import numpy as np
+import os
 import time
+import argparse
+import logging
+import pika
+import json
+import threading
 
-cap = cv2.VideoCapture(1)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 960)
+import sys
+sys.path.append('../..')
+from processor import *
 
-model = cv2.ml.SVM_load('model_linear.xml')
-vector = model.getSupportVectors()
-vector = vector.transpose()
-# vector = np.append(vector, vector[-1])
-print(len(vector), type(vector))
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(lineno)d - %(message)s')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
-de = cv2.HOGDescriptor_getDefaultPeopleDetector()
-print(len(de), type(de))
-hog = cv2.HOGDescriptor()
-hog.setSVMDetector(vector)
 
 def inside(r, q):
     rx, ry, rw, rh = r
@@ -23,75 +28,208 @@ def inside(r, q):
     return rx > qx and ry > qy and rx + rw < qx + qw and ry + rh < qy + qh
 
 
-def draw_detections(img, rects, thickness = 1):
+def draw_detections(image, rects, thickness = 1):
     for x, y, w, h in rects:
         # the HOG detector returns slightly larger rectangles than the real objects.
         # so we slightly shrink the rectangles to get a nicer output.
         pad_w, pad_h = int(0.15*w), int(0.05*h)
-        cv2.rectangle(img, (x+pad_w, y+pad_h), (x+w-pad_w, y+h-pad_h), (0, 255, 0), thickness)
+        cv2.rectangle(image, (x+pad_w, y+pad_h), (x+w-pad_w, y+h-pad_h), (0, 255, 0), thickness)
 
-FPS = 1/2 # 15 frames per second
-t = time.time()
 
-while True:
-    try:
-        current_time = time.time()
-        if current_time - t > FPS:
-            t = current_time
-            f, frame = cap.read()
-            # cv2.imshow('image', frame)
-            if f:
-                found, w = hog.detectMultiScale(frame, winStride=(8, 8), padding=(32, 32), scale=1.10)
-                # found_filtered = []
-                # for ri, r in enumerate(found):
-                #     for qi, q in enumerate(found):
-                #         if ri != qi and inside(r, q):
-                #             break
-                #     else:
-                #         found_filtered.append(r)
-                draw_detections(frame, found)
-                # print('%d (%d) found' % (len(found_filtered), len(found)))
-                print('%d found' % (len(found),))
-                # cv2.imshow('image', frame)
-            if cv2.waitKey(10) & 0xFF == ord('q'):
-                break
-    except KeyboardInterrupt:
-        break
+def save_outputs(image, detections, output_path, extension='.jpg', image_size=(64, 128)):
+    last_file_name_count = len(os.listdir(output_path))
+    for x, y, w, h in detections:
+        cropped_image = image[y:y+h, x:x+w]
+        resized_image = cv2.resize(cropped_image, image_size, interpolation=cv2.INTER_AREA)
+        cv2.imwrite(os.path.join(output_path, str(last_file_name_count).zfill(5) + extension), resized_image, [cv2.IMWRITE_JPEG_QUALITY, 90])
+        last_file_name_count += 1
 
-cap.release()
 
-# EXCHANGE = 'image_pipeline'
-# ROUTING_KEY_RAW = '0'
-# ROUTING_KEY_OUT = '1'
-# ROUTING_KEY_EXPORT = '9'
-#
-# connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
-# channel = connection.channel()
-#
-# result = channel.queue_declare(exclusive=True)
-# my_queue = result.method.queue
-#
-# def on_process(ch, method, props, body):
-#     try:
-#         message = json.loads(body.decode())
-#         base64_image = message['image'].encode()
-#         image = base64.b64decode(base64_image)
-#
-#         # Calculate average color of the image
-#         avg_color = str(get_average_color(image))
-#         results = message['results']
-#         results.append({'avg_color': avg_color})
-#         message['results'] = results
-#
-#         # Export the image along with the information
-#         channel.basic_publish(exchange=EXCHANGE, routing_key=ROUTING_KEY_EXPORT, body=json.dumps(message))
-#     except Exception as ex:
-#         print(ex)
-#
-# channel.queue_bind(queue=my_queue, exchange=EXCHANGE, routing_key=ROUTING_KEY_RAW)
-#
-# channel.basic_consume(on_process, queue=my_queue, no_ack=True)
-# try:
-#     channel.start_consuming()
-# except:
-#     channel.stop_consuming()
+class Classifier(object):
+    def __init__(self):
+        self.hog = None
+        pass
+
+    def load_classifier(self, classifier_path, window_size=(64, 128)):
+        block_size = (16, 16)
+        block_stride = (8, 8)
+        cell_size = (8, 8)
+        n_bins = 9
+        derive_aperture = 1
+        win_sigma = 4.
+        histogram_norm_type = 0
+        l2_hys_threshold = 2.0e-01
+        gamma_correction = 0
+        n_levels = 64
+
+        self.hog = cv2.HOGDescriptor(window_size, block_size, block_stride, cell_size,
+            n_bins, derive_aperture, win_sigma, histogram_norm_type, l2_hys_threshold,
+            gamma_correction, n_levels)
+
+        svm_model = cv2.ml.SVM_load(classifier_path)
+        rho = np.ones((1, 1), dtype=np.float32)
+        rho_value, alpha, svdix = svm_model.getDecisionFunction(0)
+        rho[0] = -1 * rho_value
+        vector = svm_model.getSupportVectors().transpose()
+        vector_rho = np.concatenate((vector, rho))
+
+        self.hog.setSVMDetector(vector_rho)
+        return True
+
+    def classify(self, image, win_stride=(8, 8), padding=(32, 32), scale=1.05, final_threshold=2):
+        founds, weights = self.hog.detectMultiScale(image, winStride=win_stride, padding=padding, scale=scale, finalThreshold=final_threshold)
+
+        return founds, weights
+
+
+class PedestrianProcessor(Processor):
+    def __init__(self, option_dict={}):
+        self.options = option_dict
+
+    def add_processor(self, processor):
+        self.processor = processor
+
+    def setValues(self, options):
+        self.options.update(options)
+
+    def getValue(self, key):
+        if key in self.options:
+            return self.options[key]
+        else:
+            return None
+
+    def perform(self, source):
+        if self.processor is not None:
+            return self.processor.classify(source)
+
+    def read(self):
+        for stream in self.input_handler:
+            if streamer is not None:
+                return False, None
+            return True, streamer.read()
+
+    def write(self, packet):
+        print(packet.output())
+
+    def run(self):
+        FPS = 0.
+        frame = 0
+        start_time = time.time()
+
+        cap = None
+        if 'camera' in self.options:
+            cap = cv2.VideoCapture(self.options['camera'])
+
+        try:
+            while True:
+                if cap:
+                    f, image = cap.read()
+                else:
+                    f, packet = self.read()
+                    image = packet.raw
+                if f:
+                    founds, weights = self.perform(image)
+                    if self.options['output']:
+                        save_outputs(image, founds, self.options['output'])
+
+                    if len(founds) > 0:
+                        if packet:
+                            packet.data['pedestrian_detection'] = [founds, weights]
+                            self.write(packet)
+
+                    draw_detections(image, founds, thickness=2)
+                    if self.options['interactive']:
+                        while True:
+                            cv2.imshow('result: n to next, q to exit', image)
+                            key = cv2.waitKey(30) & 0xFF
+                            if key == ord('n'):
+                                break
+                            elif key == ord('q'):
+                                return
+                    # else:
+                    #     cv2.imshow('result', image)
+                    #     cv2.waitKey(1)
+                    frame += 1
+                else:
+                    time.sleep(0.1)
+
+                if self.options['verbose']:
+                    end_time = time.time()
+                    if end_time - start_time > 1:
+                        start_time = end_time
+                        logger.info('FPS is %0.2f' % (frame,))
+                        frame = 0
+        except KeyboardInterrupt:
+            pass
+        except Exception as ex:
+            logger.error(str(ex))
+
+
+def interpret_options(args):
+    processor = PedestrianProcessor()
+
+    if not args.classifier:
+        return False, 'No classifier defined', None
+
+    classifier = Classifier()
+    if not classifier.load_classifier(args.classifier):
+        return False, 'Cannot load classifier %s ' % (args.classifier,), None
+    processor.add_processor(classifier)
+
+    instream = None
+    if args.rabbitmq_exchange:
+        instream = RabbitMQStreamer()
+        instream.config(args.rabbitmq_exchange, args.rabbitmq_routing_in, args.rabbitmq_routing_out)
+        result, message = instream.connect()
+        if result:
+            instream.start()
+            processor.add_handler(instream, 'in-out')
+        else:
+            return result, 'Cannot run RabbitMQ %s ' % (message,), None
+
+    if instream is None and args.source_camera is None:
+        return False, 'Need an input source either from a camera or rabbitmq exchange', None
+
+    options = {
+        'camera': args.source_camera,
+        'output': args.output_path,
+        'verbose': args.verbose,
+        'interactive': args.interactive
+    }
+    processor.setValues(options)
+
+    return True, '', processor
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    # Classifier option
+    parser.add_argument('-c', dest='classifier', help='Full path of the classifier')
+    
+    # Input source options
+    parser.add_argument('-s', dest='source_camera', help='Camera path')
+    parser.add_argument('--rabbitmq-exchange', dest='rabbitmq_exchange', help='Name of exchange for input')
+    parser.add_argument('--rabbitmq-routing-input', dest='rabbitmq_routing_in', help='Routing key for input')
+
+    # Output source options
+    parser.add_argument('--rabbitmq-routing-output', dest='rabbitmq_routing_out', help='Routing key for output')
+    parser.add_argument('-o', dest='output_path', help='Path to save recognized pedestrians')
+
+    # Other options
+    parser.add_argument('-v', dest='verbose', help='Verbose', action='store_true')
+    parser.add_argument('-i', dest='interactive', help='Path to test images', action='store_true')
+    args = parser.parse_args()
+
+    result, message, processor = interpret_options(args)
+
+    if result is False:
+        logger.error(message)
+        parser.print_help()
+        exit(-1)
+
+    processor.run()
+
+
+if __name__ == '__main__':
+    main()
