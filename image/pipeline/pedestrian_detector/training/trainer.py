@@ -120,8 +120,18 @@ def train_hog(images, hog, featureLength, label_value):
     return samples, labels
 
 
-def train(pos_path, pos_list, neg_path, neg_list, output='classifier.xml', verbose=False):
-    
+def train(pos_path, pos_list, neg_path, neg_list, output='classifier.xml', binary=None, binary_label=None, verbose=False):
+    pre_samples = pre_labels = None
+    if binary is not None and binary_label is not None:
+        if verbose:
+            logger.info('Loading images and labels from %s and %s' % (binary, binary_label))
+        with open(binary, 'rb') as file:
+            pre_samples = np.load(file)
+        
+        with open(binary_label, 'rb') as file:
+            pre_labels = np.load(file)
+            pre_labels.fill(-1)
+
     win_size = (64, 128)
     blockSize = (16, 16)
     blockStride = (8, 8)
@@ -144,8 +154,12 @@ def train(pos_path, pos_list, neg_path, neg_list, output='classifier.xml', verbo
 
     logger.info('Start training classifier...')
     svm = SVM()
-    training_samples = np.concatenate((pos_samples, neg_samples))
-    training_labels = np.concatenate((pos_labels, neg_labels))
+    if pre_samples is not None:
+        training_samples = np.concatenate((pre_samples, pos_samples, neg_samples))
+        training_labels = np.concatenate((pre_labels, pos_labels, neg_labels))
+    else:
+        training_samples = np.concatenate((pos_samples, neg_samples))
+        training_labels = np.concatenate((pos_labels, neg_labels))
     svm.train(training_samples, training_labels)
     logger.info('Done.')
     svm.save(output)
@@ -159,6 +173,9 @@ def main():
     parser.add_argument('-n', dest='negative_image_list', help='List of the negative images')
     parser.add_argument('-o', dest='output_classifier', help='Output name of classifier')
 
+    parser.add_argument('-b', dest='binary_images', help='Path to binary images')
+    parser.add_argument('-bl', dest='binary_images_label', help='Path to label of the binary images')
+
     parser.add_argument('-hnd', dest='hard_neg_image_path', help='Path to images for hard-negative-mining')
     parser.add_argument('-hn', dest='hard_neg_image_list', help='List of the images for hard-negative-mining')
     parser.add_argument('-hnic', dest='hn_input_classifier', help='Target classifier for hard-negative-mining')
@@ -170,7 +187,15 @@ def main():
 
     if args.positive_image_path and args.positive_image_list and args.negative_image_path and args.negative_image_list:
         logger.info('Perform training from positive and negative images')
-        train(args.positive_image_path, args.positive_image_list, args.negative_image_path, args.negative_image_list, output=args.output_classifier, verbose=verbose)
+        train(
+            args.positive_image_path,
+            args.positive_image_list,
+            args.negative_image_path,
+            args.negative_image_list,
+            output=args.output_classifier,
+            binary=args.binary_images,
+            binary_label=args.binary_images_label,
+            verbose=verbose)
 
 if __name__ == '__main__':
     main()

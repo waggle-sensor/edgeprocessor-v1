@@ -4,6 +4,7 @@ import json
 import base64
 import pika
 import queue
+import threading
 
 class Packet(object):
     META = 'meta_data'
@@ -14,26 +15,26 @@ class Packet(object):
         self.data = []
         self.raw = None
         if binary_packet is not None:
-            load(binary_packet)
+            self.load(binary_packet)
 
-    def load(binary_packet):
+    def load(self, binary_packet):
         packet = json.loads(binary_packet)
-        self.meta_data = packet[META]
-        self.data = packet[RESULTS]
-        self.raw = decode_raw(packet[RAW])
+        self.meta_data = packet[self.META]
+        self.data = packet[self.RESULTS]
+        self.raw = self.decode_raw(packet[self.RAW])
 
-    def output():
-        message = {META: self.meta_data, RESULTS: self.data, RAW: encode_raw(self.raw)}
+    def output(self):
+        message = {self.META: self.meta_data, self.RESULTS: self.data, self.RAW: self.encode_raw(self.raw).decode()}
         return json.dumps(message)
 
-    def decode_raw(base64_raw):
+    def decode_raw(self, base64_raw):
         return base64.b64decode(base64_raw)
 
-    def encode_raw(raw):
+    def encode_raw(self, raw):
         return base64.b64encode(raw)
 
 
-class Streamer(threading):
+class Streamer(object):
     def __init__(self):
         pass
 
@@ -59,6 +60,7 @@ class RabbitMQStreamer(Streamer):
         self.queue = None
 
         self.received_packet = queue.Queue(1)
+        self.thread = threading.Thread(target=self.run)
 
     def open(self, **args):
         pass
@@ -78,6 +80,7 @@ class RabbitMQStreamer(Streamer):
             result = self.channel.queue_declare(exclusive=True)
             self.queue = result.method.queue
             self.channel.queue_bind(queue=self.queue, exchange=self.exchange, routing_key=self.routing_in)
+            self.thread.start()
         except Exception as ex:
             return False, str(ex)
         return True, ''
@@ -90,7 +93,7 @@ class RabbitMQStreamer(Streamer):
 
     def write(self, data):
         try:
-            self.channel.basic_publish(exchange=self.exchange, routing_key=self.routing_key_out, body=data)
+            self.channel.basic_publish(exchange=self.exchange, routing_key=self.routing_out, body=data)
             return True
         except Exception as ex:
             logger.error('Could not send %s' % (str(ex),))

@@ -66,7 +66,7 @@ def main():
         screen_height = int(args.screen_height)
 
     list_images = os.listdir(input_dir)
-    window_name = 'c to crop, r to reset, q to next, z to exit'
+    window_name = 'c to crop, q to next, z to exit'
 
     def drag_drop_crop(event, x, y, flags, param):
         global refPt, refPt2, dragging, scaling, prev, target_resolution
@@ -124,8 +124,6 @@ def main():
 
                 if key == ord('q'):
                     break
-                elif key == ord('r'):
-                    image = clone.copy()
                 elif key == ord('c'):
                     if len(refPt) == 2:
                         roi = clone[refPt[1]:refPt2[1], refPt[0]:refPt2[0]]

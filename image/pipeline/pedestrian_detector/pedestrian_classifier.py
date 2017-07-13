@@ -130,7 +130,8 @@ class PedestrianProcessor(Processor):
         cap = None
         if self.options['camera'] is not None:
             cap = cv2.VideoCapture(self.options['camera'])
-
+            
+        packet = None
         try:
             while True:
                 if cap:
@@ -138,7 +139,7 @@ class PedestrianProcessor(Processor):
                 else:
                     f, packet = self.read()
                     if f:
-                        image = packet.raw
+                        image = cv2.imdecode(packet.raw, 1)
                 if f:
                     founds, weights = self.perform(image)
                     if self.options['output']:
@@ -146,7 +147,7 @@ class PedestrianProcessor(Processor):
 
                     if len(founds) > 0:
                         if packet:
-                            packet.data.append({'pedestrian_detection': [founds, weights]})
+                            packet.data.append({'pedestrian_detection': [founds.tolist(), weights.tolist()]})
                             self.write(packet)
 
                     draw_detections(image, founds, thickness=2)
@@ -194,7 +195,6 @@ def interpret_options(args):
         instream.config(args.rabbitmq_exchange, args.rabbitmq_routing_in, args.rabbitmq_routing_out)
         result, message = instream.connect()
         if result:
-            instream.start()
             processor.add_handler(instream, 'in-out')
         else:
             return result, 'Cannot run RabbitMQ %s ' % (message,), None
