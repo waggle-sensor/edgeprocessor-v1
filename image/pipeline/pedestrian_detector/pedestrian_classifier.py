@@ -11,7 +11,7 @@ import json
 import threading
 
 import sys
-sys.path.append('../..')
+sys.path.append('/usr/lib/waggle/edge_processor/image')
 from processor import *
 
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(lineno)d - %(message)s')

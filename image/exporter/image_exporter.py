@@ -8,6 +8,10 @@ import io
 import base64
 import piexif
 
+import sys
+sys.path.append('/usr/lib/waggle/edge_processor/image')
+from processor import *
+
 null_exif = {
   '0th': {},
   'Exif': {},

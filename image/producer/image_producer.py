@@ -11,7 +11,7 @@ import cv2
 import signal
 
 import sys
-sys.path.append('..')
+sys.path.append('/usr/lib/waggle/edge_processor/image')
 from processor import *
 
 graceful_signal_to_kill = False
@@ -74,7 +74,6 @@ def main():
           f, frame = cap.read()
           if f:
             byte_frame = cv2.imencode('.jpg', frame)[1].tostring()
-            base64_frame = base64.b64encode(byte_frame).decode()
 
             logging.info("inserting {} camera image into processing pipeline...".format(device))
             packet = Packet()
@@ -84,7 +83,7 @@ def main():
                                      'device': os.path.basename(device),
                                      'producer': os.path.basename(__file__),
                                      'datetime': time.time()}
-            packet.raw = base64_frame
+            packet.raw = byte_frame
             channel.basic_publish(exchange='image_pipeline', routing_key='0', body=packet.output())
           else:
             failure_count += 1
