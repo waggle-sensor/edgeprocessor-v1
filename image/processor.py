@@ -51,13 +51,15 @@ class Streamer(object):
         raise NotImplemented('Must have run method')
 
 class RabbitMQStreamer(Streamer):
-    def __init__(self):
+    def __init__(self, logger=None):
         self.connection = None
         self.channel = None
         self.exchange = None
         self.routing_in = None
         self.routing_out = None
         self.queue = None
+
+        self.logger = logger
 
         self.received_packet = queue.Queue(1)
         self.thread = threading.Thread(target=self.run)
@@ -96,7 +98,8 @@ class RabbitMQStreamer(Streamer):
             self.channel.basic_publish(exchange=self.exchange, routing_key=self.routing_out, body=data)
             return True
         except Exception as ex:
-            logger.error('Could not send %s' % (str(ex),))
+            if self.logger:
+                self.logger.error('Could not write %s: %s' % (str(data), str(ex)))
             return False
 
     def onReceived(self, ch, method, props, body):
@@ -105,15 +108,18 @@ class RabbitMQStreamer(Streamer):
                 self.received_packet.get()
             self.received_packet.put(Packet(body.decode()))
         except Exception as ex:
-            logger.error('Could not receive frame %s' % (str(ex),))
+            if self.logger:
+                self.logger.error('Could not receive frame %s' % (str(ex),))
             
 
     def run(self):
         if self.channel is None:
-            logger.error('RabbitMQ channel is None')
+            if self.logger:
+                self.logger.error('RabbitMQ channel is None')
             return
         if not self.channel.is_open:
-            logger.error('RabbitMQ channel is not opened')
+            if self.logger:
+                self.logger.error('RabbitMQ channel is not opened')
             return
 
         self.channel.basic_consume(self.onReceived, queue=self.queue, no_ack=True)
@@ -122,8 +128,9 @@ class RabbitMQStreamer(Streamer):
                 self.channel.start_consuming()
             except Exception as ex:
                 self.channel.stop_consuming()
-                logger.info('RabbitMQ consumption failed %s' % (str(ex),))
-                logger.info('Restarting RabbitMQ consumption in 5 seconds...')
+                if self.logger:
+                    self.logger.info('RabbitMQ consumption failed %s' % (str(ex),))
+                    self.logger.info('Restarting RabbitMQ consumption in 5 seconds...')
                 time.sleep(5)
 
 class Processor(object):

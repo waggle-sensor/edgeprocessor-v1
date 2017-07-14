@@ -10,6 +10,10 @@ import time
 import cv2
 import signal
 
+import sys
+sys.path.append('..')
+from processor import *
+
 graceful_signal_to_kill = False
 
 def main():
@@ -73,15 +77,15 @@ def main():
             base64_frame = base64.b64encode(byte_frame).decode()
 
             logging.info("inserting {} camera image into processing pipeline...".format(device))
-            message = {'meta_data': {'node_id': node_id,
+            packet = Packet()
+            packet.meta_data = {'node_id': node_id,
                                      'image_width': config['width'],
                                      'image_height': config['height'],
                                      'device': os.path.basename(device),
                                      'producer': os.path.basename(__file__),
-                                     'datetime': time.time()},
-                       'results': [],
-                       'image': base64_frame}
-            channel.basic_publish(exchange='image_pipeline', routing_key='0', body=json.dumps(message))
+                                     'datetime': time.time()}
+            packet.raw = base64_frame
+            channel.basic_publish(exchange='image_pipeline', routing_key='0', body=packet.output())
           else:
             failure_count += 1
             #TODO: frequent failure of obtaining images needs to be handled here

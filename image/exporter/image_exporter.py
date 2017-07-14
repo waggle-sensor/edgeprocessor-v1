@@ -60,11 +60,11 @@ def make_image_bytes(meta_data, additional_info, image):
 
 def process_image(channel, method, properties, body):
   logging.info(" [x] pushing image to export queue...")
-  message = json.loads(body.decode())
+  packet = Packet(body.decode())
 
   # if the message contains image
-  if 'image' in message:
-    image_byte = make_image_bytes(message['meta_data'], message['results'], base64.b64decode(message['image']))
+  if packet.raw:
+    image_byte = make_image_bytes(packet.meta_data, packet.data, packet.raw)
     channel.basic_publish(exchange='', routing_key='images', body=image_byte.read(), properties=properties)
   else:
     # send message['results'] to data queue

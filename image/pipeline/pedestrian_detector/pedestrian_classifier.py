@@ -191,7 +191,7 @@ def interpret_options(args):
 
     instream = None
     if args.rabbitmq_exchange:
-        instream = RabbitMQStreamer()
+        instream = RabbitMQStreamer(logger)
         instream.config(args.rabbitmq_exchange, args.rabbitmq_routing_in, args.rabbitmq_routing_out)
         result, message = instream.connect()
         if result:
@@ -230,7 +230,7 @@ def main():
 
     # Other options
     parser.add_argument('-v', dest='verbose', help='Verbose', action='store_true')
-    parser.add_argument('-i', dest='interactive', help='Path to test images', action='store_true')
+    parser.add_argument('-i', dest='interactive', help='Show results in display', action='store_true')
     args = parser.parse_args()
 
     result, message, processor = interpret_options(args)
