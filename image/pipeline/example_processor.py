@@ -2,7 +2,10 @@ import pika
 import json
 import cv2
 import numpy as np
-import base64
+
+import sys
+sys.path.append('/usr/lib/waggle/edge_processor/image')
+from processor import *
 
 EXCHANGE = 'image_pipeline'
 ROUTING_KEY_RAW = '0'
@@ -32,18 +35,14 @@ def get_average_color(image):
 
 def on_process(ch, method, props, body):
     try:
-        message = json.loads(body.decode())
-        base64_image = message['image'].encode()
-        image = base64.b64decode(base64_image)
+        message = Packet(body.decode())
 
         # Calculate average color of the image
-        avg_color = str(get_average_color(image))
-        results = message['results']
-        results.append({'avg_color': avg_color})
-        message['results'] = results
+        avg_color = str(get_average_color(message.raw))
+        results = message.data.append({'avg_color': avg_color})
 
         # Export the image along with the information
-        channel.basic_publish(exchange=EXCHANGE, routing_key=ROUTING_KEY_EXPORT, body=json.dumps(message))
+        channel.basic_publish(exchange=EXCHANGE, routing_key=ROUTING_KEY_EXPORT, body=message.output())
     except Exception as ex:
         print(ex)
 

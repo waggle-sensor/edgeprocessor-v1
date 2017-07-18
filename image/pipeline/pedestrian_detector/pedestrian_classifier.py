@@ -139,7 +139,8 @@ class PedestrianProcessor(Processor):
                 else:
                     f, packet = self.read()
                     if f:
-                        image = cv2.imdecode(packet.raw, 1)
+                        nparray_raw = np.fromstring(packet.raw, np.uint8)
+                        image = cv2.imdecode(nparray_raw, 1)
                 if f:
                     founds, weights = self.perform(image)
                     if self.options['output']:
