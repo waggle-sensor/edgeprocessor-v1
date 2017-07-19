@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+
+import os
 import pika
 import json
 import cv2
@@ -9,10 +12,6 @@ import logging
 sys.path.append('/usr/lib/waggle/edge_processor/image')
 from processor import *
 
-EXCHANGE = 'image_pipeline'
-ROUTING_KEY_RAW = '0'
-ROUTING_KEY_EXPORT = '9'
-
 datetime_format = '%a %b %d %H:%M:%S %Z %Y'
 
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(lineno)d - %(message)s')
@@ -22,35 +21,6 @@ ch = logging.StreamHandler()
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
-start_time = end_time = interval = daytime = None
-
-def on_process(ch, method, props, body):
-    global start_time, end_time, interval, daytime
-    try:
-        print(start_time)
-        # Export the image
-        ch.basic_publish(exchange=EXCHANGE, routing_key=ROUTING_KEY_EXPORT, body=body)
-    except Exception as ex:
-        logging.error(ex)
-
-
-def collection(start_time, end_time, interval=1, daytime=True, verbose=False):
-    global start_time, end_time, interval, daytime
-    st 
-    try:
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
-        channel = connection.channel()
-
-        result = channel.queue_declare(exclusive=True)
-        my_queue = result.method.queue
-        channel.queue_bind(queue=my_queue, exchange=EXCHANGE, routing_key=ROUTING_KEY_RAW)
-
-        channel.basic_consume(on_process, queue=my_queue, no_ack=True)
-        channel.start_consuming()
-    except Exception as ex:
-        logging.error(str(ex))
-        channel.stop_consuming()
-
 
 class ImageCollectionProcessor(Processor):
     def __init__(self):
@@ -58,8 +28,8 @@ class ImageCollectionProcessor(Processor):
         self.options = {
         'start_time': time.time(),
         'end_time': time.time(),
-        'daytime': True
-        'interval': 1
+        'daytime': True,
+        'interval': 1,
         'verbose': False
         }
 
@@ -102,6 +72,9 @@ class ImageCollectionProcessor(Processor):
         except Exception as ex:
             logger.error(str(ex))
 
+EXCHANGE = 'image_pipeline'
+ROUTING_KEY_RAW = '0'
+ROUTING_KEY_EXPORT = '9'
 
 def main():
     datetime_format = '%a %b %d %H:%M:%S %Z %Y'
@@ -123,30 +96,39 @@ def main():
             config = json.loads(file.read())
     else:
         config = {
-            'start_date': time.strftime(datetime_format, time.gmttime()),
-            'end_date': time.strftime(datetime_format, time.gmttime()),
+            'start_time': time.strftime(datetime_format, time.gmttime()),
+            'end_time': time.strftime(datetime_format, time.gmtime()),
             'daytime': True,
             'interval': 1,
             'verbose': False
             }
         with open(config_file, 'w') as file:
             file.write(json.dumps(config))
-        logger.info('Please specify /etc/waggle/image_collector.conf file')
+        logger.error('Please specify /etc/waggle/image_collector.conf file')
         exit(-1)
     
-    if config['start_date'] is None or config['end_date'] is None:
+    if config['start_time'] is None or config['end_time'] is None:
         logger.error('start and end date must be provided')
         exit(-1)
 
     try:
-        config['start_date'] = time.mktime(time.strptime(config['start_date'], datetime_format))
-        config['end_date'] = time.mktime(time.strptime(config['end_date'], datetime_format))
+        config['start_time'] = time.mktime(time.strptime(config['start_time'], datetime_format))
+        config['end_time'] = time.mktime(time.strptime(config['end_time'], datetime_format))
     except Exception as ex:
         logger.error(str(ex))
         exit(-1)
 
     processor = ImageCollectionProcessor()
+    stream = RabbitMQStreamer(logger)
+    stream.config(EXCHANGE, ROUTING_KEY_RAW, ROUTING_KEY_EXPORT)
+    result, message = stream.connect()
+    if result:
+        processor.add_handler(stream, 'in-out')
+    else:
+        logger.error('Cannot run RabbitMQ %s ' % (message,))
+        exit(-1)
     processor.setValues(config)
+    processor.run()
 
 
 if __name__ == '__main__':

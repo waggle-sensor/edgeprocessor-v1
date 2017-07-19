@@ -63,6 +63,7 @@ class RabbitMQStreamer(Streamer):
 
         self.received_packet = queue.Queue(1)
         self.thread = threading.Thread(target=self.run)
+        self.thread.daemon = True
 
     def open(self, **args):
         pass
