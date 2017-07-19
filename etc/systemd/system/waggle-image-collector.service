@@ -1,0 +1,12 @@
+[Unit]
+Description=Image Collector
+After=waggle-platform.target
+
+[Service]
+type=OneShot
+EnvironmentFile=/etc/waggle/image_collector.config
+ExecStart=/usr/bin/python3 -u /usr/lib/waggle/edge_processor/image/pipeline/image_collector.py $StartTime $EndTime $Interval $DayTime $Verbose
+
+
+[Install]
+WantedBy=waggle-platform.target
