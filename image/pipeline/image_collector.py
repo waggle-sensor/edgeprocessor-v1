@@ -91,6 +91,10 @@ class ImageCollectionProcessor(Processor):
                                 if self.options['target'] in device:
                                     self.write(packet)
                                     last_updated_time = current_time
+                        else:
+                            time.sleep(self.options['interval'])
+                    else:
+                        time.sleep(1)
                 else:
                     time.sleep(0.5)
                 if current_time > self.options['end_time']:
