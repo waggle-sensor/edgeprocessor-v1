@@ -6,6 +6,7 @@ import json
 import cv2
 import numpy as np
 import time
+import datetime
 import argparse
 import sys
 import logging
@@ -28,7 +29,8 @@ class ImageCollectionProcessor(Processor):
         self.options = {
         'start_time': time.time(),
         'end_time': time.time(),
-        'daytime': True,
+        'daytime': ('00:00:00', '23:59:59'),
+        'target': 'bottom'
         'interval': 1,
         'verbose': False
         }
@@ -50,18 +52,44 @@ class ImageCollectionProcessor(Processor):
             if self.options['verbose']:
                 logger.info('A packet is sent to output')
 
+    def check_daytime(self, current_time, daytime_start, duration):
+        time_now = datetime.datetime.fromtimestamp(current_time)
+        daytime_start = time_now.replace(hour=daytime_start[0], minute=daytime_start[1], second=daytime_start[2])
+
+        diff_in_second = (time_now - daytime_start).total_seconds()
+        if diff_in_second > 0 and diff_in_second < duration:
+            return True
+        else:
+            return False
+
     def run(self):
         while time.time() <= self.options['start_time']:
             time.sleep(1)
+
+        daytime_duration = 3600 * 24 # covers one full day; collect all day long
+        daytime_start = [0, 0, 0] # Default
+        try:
+            daytime_start = [int(x) for x in self.options['daytime'][0].split(':')]
+            daytime_end = [int(x) for x in self.options['daytime'][1].split(':')]
+            daytime_duration = (daytime_end[0] - daytime_start[0] * 3600) + (daytime_end[1] - daytime_start[1] * 60) + (daytime_end[2] - daytime_start[2])
+        except Exception as ex:
+            logger.error(str(ex))
 
         try:
             last_updated_time = time.time()
             while True:
                 current_time = time.time()
                 if current_time - last_updated_time > self.options['interval']:
-                    f, packet = self.read()
-                    if f:
-                        self.write(packet)
+                    # Check if now is in the daytime
+                    if self.check_daytime(current_time, daytime_start, daytime_duration)
+                        f, packet = self.read()
+                        if f:
+                            # Check if the image is the target
+                            if 'device' in packet.meta_data:
+                                device = packet.meta_data['device']
+                                if self.options['target'] in device:
+                                    self.write(packet)
+                                    last_updated_time = current_time
                 else:
                     time.sleep(0.5)
                 if current_time > self.options['end_time']:
@@ -77,8 +105,6 @@ ROUTING_KEY_RAW = '0'
 ROUTING_KEY_EXPORT = '9'
 
 def main():
-    datetime_format = '%a %b %d %H:%M:%S %Z %Y'
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-c', dest='config_file', help='Specify config file')
@@ -96,9 +122,10 @@ def main():
             config = json.loads(file.read())
     else:
         config = {
-            'start_time': time.strftime(datetime_format, time.gmttime()),
+            'start_time': time.strftime(datetime_format, time.gmtime()),
             'end_time': time.strftime(datetime_format, time.gmtime()),
-            'daytime': True,
+            'daytime': ('00:00:00', '23:59:59'),
+            'target': 'bottom'
             'interval': 1,
             'verbose': False
             }
