@@ -83,7 +83,7 @@ class RabbitMQStreamer(Streamer):
             result = self.channel.queue_declare(exclusive=True)
             self.queue = result.method.queue
             self.channel.queue_bind(queue=self.queue, exchange=self.exchange, routing_key=self.routing_in)
-            if not self.thread.is_alive:
+            if not self.thread.is_alive():
                 self.thread.start()
         except Exception as ex:
             return False, str(ex)

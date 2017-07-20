@@ -36,7 +36,7 @@ def generate_meta_data(meta_data, results):
   if 'producer' in meta_data:
     oth[piexif.ImageIFD.Software] = meta_data['producer']
   if 'datetime' in meta_data:
-    oth[piexif.ImageIFD.DateTime] = time.strftime('%Y:%m:%d %H:%M:%S', time.gmtime(meta_data['datetime']))  # last time the image changed
+    oth[piexif.ImageIFD.DateTime] = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(meta_data['datetime']))  # last time the image changed
   exif_dict['0th'] = oth
 
   exif = exif_dict['Exif']
@@ -69,7 +69,7 @@ def process_image(channel, method, properties, body):
   # if the message contains image
   if packet.raw:
     image_byte = make_image_bytes(packet.meta_data, packet.data, packet.raw)
-    channel.basic_publish(exchange='', routing_key='images', body=image_byte.read(), properties=properties)
+    channel.basic_publish(exchange='', routing_key='images', body=image_byte.read(), properties=pika.BasicProperties(headers=packet.meta_data))
   else:
     # send message['results'] to data queue
     # TODO: data queue in edge processor does not exist, a shovel corresponding to the data queue is needed
