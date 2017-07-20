@@ -15,6 +15,7 @@ sys.path.append('/usr/lib/waggle/edge_processor/image')
 from processor import *
 
 graceful_signal_to_kill = False
+datetime_format = '%a %b %d %H:%M:%S %Z %Y'
 
 def main():
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -82,7 +83,7 @@ def main():
                                      'image_height': config['height'],
                                      'device': os.path.basename(device),
                                      'producer': os.path.basename(__file__),
-                                     'datetime': time.time()}
+                                     'datetime': time.strftime(datetime_format, time.gmtime())}
             packet.raw = byte_frame
             channel.basic_publish(exchange='image_pipeline', routing_key='0', body=packet.output())
           else:
