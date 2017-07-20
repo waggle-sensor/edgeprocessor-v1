@@ -131,7 +131,7 @@ class RabbitMQStreamer(Streamer):
                 self.channel.start_consuming()
             except pika.exceptions.ConnectionClosed as ex:
                 if self.logger:
-                    self.logger.info('RabbitMQ consumption failed %s' % (str(ex),))
+                    self.logger.info('RabbitMQ connection closed %s' % (str(ex),))
                     self.logger.info('Restarting RabbitMQ consumption in 5 seconds...')
                 time.sleep(5)
                 self.connect()
@@ -140,6 +140,7 @@ class RabbitMQStreamer(Streamer):
                 if self.logger:
                     self.logger.info('RabbitMQ consumption failed %s' % (str(ex),))
                     self.logger.info('Restarting RabbitMQ consumption in 5 seconds...')
+                self.connect()
                 time.sleep(5)
 
 class Processor(object):

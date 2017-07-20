@@ -3,7 +3,7 @@ Description=Image Collector
 After=waggle-platform.target
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStart=/usr/bin/python3 -u /usr/lib/waggle/edge_processor/image/pipeline/image_collector.py
 
 
