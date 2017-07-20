@@ -30,7 +30,7 @@ class ImageCollectionProcessor(Processor):
         'start_time': time.time(),
         'end_time': time.time(),
         'daytime': ('00:00:00', '23:59:59'),
-        'target': 'bottom'
+        'target': 'bottom',
         'interval': 1,
         'verbose': False
         }
@@ -71,17 +71,18 @@ class ImageCollectionProcessor(Processor):
         try:
             daytime_start = [int(x) for x in self.options['daytime'][0].split(':')]
             daytime_end = [int(x) for x in self.options['daytime'][1].split(':')]
-            daytime_duration = (daytime_end[0] - daytime_start[0] * 3600) + (daytime_end[1] - daytime_start[1] * 60) + (daytime_end[2] - daytime_start[2])
+            daytime_duration = (daytime_end[0] - daytime_start[0]) * 3600 + (daytime_end[1] - daytime_start[1]) * 60 + (daytime_end[2] - daytime_start[2])
         except Exception as ex:
             logger.error(str(ex))
 
+        logger.info('Collection started')
         try:
             last_updated_time = time.time()
             while True:
                 current_time = time.time()
                 if current_time - last_updated_time > self.options['interval']:
                     # Check if now is in the daytime
-                    if self.check_daytime(current_time, daytime_start, daytime_duration)
+                    if self.check_daytime(current_time, daytime_start, daytime_duration):
                         f, packet = self.read()
                         if f:
                             # Check if the image is the target
@@ -125,7 +126,7 @@ def main():
             'start_time': time.strftime(datetime_format, time.gmtime()),
             'end_time': time.strftime(datetime_format, time.gmtime()),
             'daytime': ('00:00:00', '23:59:59'),
-            'target': 'bottom'
+            'target': 'bottom',
             'interval': 1,
             'verbose': False
             }
