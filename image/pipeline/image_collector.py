@@ -38,6 +38,12 @@ class ImageCollectionProcessor(Processor):
     def setValues(self, options):
         self.options.update(options)
 
+    def close():
+        for in_handler in self.input_handler:
+            in_handler.close()
+        for out_handler in self.output_handler:
+            out_handler.close()
+
     def read(self):
         for stream in self.input_handler:
             if stream is None:
@@ -162,6 +168,8 @@ def main():
     processor.setValues(config)
     processor.run()
 
+    processor.close()
+    logger.info('Collector terminated')
 
 if __name__ == '__main__':
     main()

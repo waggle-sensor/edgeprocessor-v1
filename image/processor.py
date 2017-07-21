@@ -64,10 +64,18 @@ class RabbitMQStreamer(Streamer):
 
         self.received_packet = queue.Queue(1)
         self.thread = threading.Thread(target=self.run)
-        self.thread.daemon = True
+        self.thread_alive = False
 
     def open(self, **args):
         pass
+
+    def close(self):
+        self.thread_alive = False
+        if self.thread.is_alive():
+            self.thread.join()
+        if self.connection is not None:
+            if self.connection.is_open:
+                self.connection.close()
 
     def config(self, input_exchange, routing_key_in='0', routing_key_out=None):
         self.exchange = input_exchange
@@ -85,6 +93,7 @@ class RabbitMQStreamer(Streamer):
             self.queue = result.method.queue
             self.channel.queue_bind(queue=self.queue, exchange=self.exchange, routing_key=self.routing_in)
             if not self.thread.is_alive():
+                self.thread_alive = True
                 self.thread.start()
         except Exception as ex:
             return False, str(ex)
@@ -126,7 +135,7 @@ class RabbitMQStreamer(Streamer):
             return
 
         self.channel.basic_consume(self.onReceived, queue=self.queue, no_ack=True)
-        while True:
+        while self.thread_alive:
             try:
                 self.channel.start_consuming()
             except pika.exceptions.ConnectionClosed as ex:
@@ -140,7 +149,6 @@ class RabbitMQStreamer(Streamer):
                 if self.logger:
                     self.logger.info('RabbitMQ consumption failed %s' % (str(ex),))
                     self.logger.info('Restarting RabbitMQ consumption in 5 seconds...')
-                self.connect()
                 time.sleep(5)
 
 class Processor(object):
