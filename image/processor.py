@@ -71,7 +71,7 @@ class RabbitMQStreamer(Streamer):
 
     def close(self):
         self.thread_alive = False
-        if self.thread.is_alive():
+        if self.thread is not None:
             self.thread.join()
         if self.connection is not None:
             if self.connection.is_open:
@@ -114,16 +114,6 @@ class RabbitMQStreamer(Streamer):
                 self.logger.error('Could not write %s: %s' % (str(data), str(ex)))
             return False
 
-    def onReceived(self, ch, method, props, body):
-        try:
-            if self.received_packet.full():
-                self.received_packet.get()
-            self.received_packet.put(Packet(body.decode()))
-        except Exception as ex:
-            if self.logger:
-                self.logger.error('Could not receive frame %s' % (str(ex),))
-            
-
     def run(self):
         if self.channel is None:
             if self.logger:
@@ -134,19 +124,22 @@ class RabbitMQStreamer(Streamer):
                 self.logger.error('RabbitMQ channel is not opened')
             return
 
-        self.channel.basic_consume(self.onReceived, queue=self.queue, no_ack=True)
         while self.thread_alive:
             try:
-                self.channel.start_consuming()
+                method, header, body = self.channel.basic_get(queue=self.queue, no_ack=True)
+                if method is not None:
+                    if isinstance(method, pika.Basic.GetOk):
+                        if self.received_packet.full():
+                            self.received_packet.get()
+                        self.received_packet.put(Packet(body.decode()))
             except pika.exceptions.ConnectionClosed as ex:
-                if self.logger:
+                if self.logger is not None:
                     self.logger.info('RabbitMQ connection closed %s' % (str(ex),))
                     self.logger.info('Restarting RabbitMQ consumption in 5 seconds...')
                 time.sleep(5)
                 self.connect()
             except Exception as ex:
-                self.channel.stop_consuming()
-                if self.logger:
+                if self.logger is not None:
                     self.logger.info('RabbitMQ consumption failed %s' % (str(ex),))
                     self.logger.info('Restarting RabbitMQ consumption in 5 seconds...')
                 time.sleep(5)

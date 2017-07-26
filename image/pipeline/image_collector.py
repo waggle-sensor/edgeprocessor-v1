@@ -15,30 +15,34 @@ from processor import *
 
 datetime_format = '%a %b %d %H:%M:%S %Z %Y'
 
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(lineno)d - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
-
-class ImageCollectionProcessor(Processor):
-    def __init__(self):
-        super().__init__()
-        self.options = {
+def default_configuration():
+    conf = {
         'start_time': time.time(),
         'end_time': time.time(),
         'daytime': ('00:00:00', '23:59:59'),
         'target': 'bottom',
         'interval': 1,
         'verbose': False
-        }
+    }
+    return conf
+
+
+class ImageCollectionProcessor(Processor):
+    def __init__(self):
+        super().__init__()
+        self.options = default_configuration()
 
     def setValues(self, options):
         self.options.update(options)
 
-    def close():
+    def close(self):
         for in_handler in self.input_handler:
             in_handler.close()
         for out_handler in self.output_handler:
@@ -63,14 +67,15 @@ class ImageCollectionProcessor(Processor):
         daytime_start = time_now.replace(hour=daytime_start[0], minute=daytime_start[1], second=daytime_start[2])
 
         diff_in_second = (time_now - daytime_start).total_seconds()
-        if diff_in_second > 0 and diff_in_second < duration:
-            return True
-        else:
-            return False
+        if diff_in_second < 0:
+            return False, abs(diff_in_second)
+        elif diff_in_second > duration:
+            return False, 3600 * 24 - diff_in_second # wait until midnight
+        return True, 0
 
     def run(self):
         while time.time() <= self.options['start_time']:
-            time.sleep(1)
+            time.sleep(self.options['start_time'] - time.time())
 
         daytime_duration = 3600 * 24 # covers one full day; collect all day long
         daytime_start = [0, 0, 0] # Default
@@ -88,7 +93,8 @@ class ImageCollectionProcessor(Processor):
                 current_time = time.time()
                 if current_time - last_updated_time > self.options['interval']:
                     # Check if now is in the daytime
-                    if self.check_daytime(current_time, daytime_start, daytime_duration):
+                    result, wait_time = self.check_daytime(current_time, daytime_start, daytime_duration)
+                    if result:
                         f, packet = self.read()
                         if f:
                             # Check if the image is the target
@@ -100,7 +106,7 @@ class ImageCollectionProcessor(Processor):
                         else:
                             time.sleep(self.options['interval'])
                     else:
-                        time.sleep(1)
+                        time.sleep(wait_time)
                 else:
                     time.sleep(0.5)
                 if current_time > self.options['end_time']:
@@ -129,21 +135,17 @@ def main():
     
     config = None
     if os.path.isfile(config_file):
-        with open(config_file) as file:
-            config = json.loads(file.read())
+        try:
+            with open(config_file) as file:
+                config = json.loads(file.read())
+        except Exception as ex:
+            logger.error('Cannot load configuration: %s' % (str(ex),))
+            exit(-1)
     else:
-        config = {
-            'start_time': time.strftime(datetime_format, time.gmtime()),
-            'end_time': time.strftime(datetime_format, time.gmtime()),
-            'daytime': ('00:00:00', '23:59:59'),
-            'target': 'bottom',
-            'interval': 1,
-            'verbose': False
-            }
+        config = default_configuration()
         with open(config_file, 'w') as file:
             file.write(json.dumps(config))
-        logger.error('Please specify /etc/waggle/image_collector.conf file')
-        exit(-1)
+        logger.info('No config specified; default will be used. For detail, check /etc/waggle/image_collector.conf')
     
     if config['start_time'] is None or config['end_time'] is None:
         logger.error('start and end date must be provided')

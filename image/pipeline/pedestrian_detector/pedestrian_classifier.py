@@ -14,35 +14,33 @@ import sys
 sys.path.append('/usr/lib/waggle/edge_processor/image')
 from processor import *
 
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(lineno)d - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+# Run modes
+# batch: Accumulating detection counts during the time period of a day
+MODE_BATCH = 'batch'
+# stream: Sending
 
-def inside(r, q):
-    rx, ry, rw, rh = r
-    qx, qy, qw, qh = q
-    return rx > qx and ry > qy and rx + rw < qx + qw and ry + rh < qy + qh
+# burst: Sending an image with detection information when detection occurs
+MODE_BURST = 'burst'
 
-
-def draw_detections(image, rects, thickness = 1):
-    for x, y, w, h in rects:
-        # the HOG detector returns slightly larger rectangles than the real objects.
-        # so we slightly shrink the rectangles to get a nicer output.
-        pad_w, pad_h = int(0.15*w), int(0.05*h)
-        cv2.rectangle(image, (x+pad_w, y+pad_h), (x+w-pad_w, y+h-pad_h), (0, 255, 0), thickness)
-
-
-def save_outputs(image, detections, output_path, extension='.jpg', image_size=(64, 128)):
-    last_file_name_count = len(os.listdir(output_path))
-    for x, y, w, h in detections:
-        cropped_image = image[y:y+h, x:x+w]
-        resized_image = cv2.resize(cropped_image, image_size, interpolation=cv2.INTER_AREA)
-        cv2.imwrite(os.path.join(output_path, str(last_file_name_count).zfill(5) + extension), resized_image, [cv2.IMWRITE_JPEG_QUALITY, 90])
-        last_file_name_count += 1
+def default_configuration():
+    conf = {
+        'classifier': '/etc/waggle/pedestrian_classifier.xml'
+        'start_time': time.time(),
+        'end_time': time.time(),
+        'daytime': ('00:00:00', '23:59:59'),
+        'target': 'bottom',
+        'interval': 1,
+        'mode': MODE_BURST
+        'verbose': False
+    }
+    return conf
 
 
 class Classifier(object):
@@ -82,31 +80,21 @@ class Classifier(object):
         return founds, weights
 
 
-class PedestrianProcessor(Processor):
-    def __init__(self):
+class PedestrianDetectionProcessor(Processor):
+    def __init__(self, classifier_path):
         super().__init__()
-        self.options = {
-        'camera': None,
-        'output': None,
-        'verbose': False,
-        'interactive': False
-        }
-
-    def add_processor(self, processor):
-        self.processor = processor
+        self.options = default_configuration()
+        self.detector = Classifier()
+        self.detector.load_classifier(classifier_path)
 
     def setValues(self, options):
         self.options.update(options)
 
-    def getValue(self, key):
-        if key in self.options:
-            return self.options[key]
-        else:
-            return None
-
-    def perform(self, source):
-        if self.processor is not None:
-            return self.processor.classify(source)
+    def close(self):
+        for in_handler in self.input_handler:
+            in_handler.close()
+        for out_handler in self.output_handler:
+            out_handler.close()
 
     def read(self):
         for stream in self.input_handler:
@@ -122,126 +110,148 @@ class PedestrianProcessor(Processor):
             if self.options['verbose']:
                 logger.info('A packet is sent to output')
 
-    def run(self):
-        FPS = 0.
-        frame = 0
-        start_time = time.time()
+    def detect(self, image):
+        return self.detector.classify(image)
 
-        cap = None
-        if self.options['camera'] is not None:
-            cap = cv2.VideoCapture(self.options['camera'])
-            
+    def batch_mode_callback(self, image):
+        pass
+
+    def burst_mode_callback(self, packet):
+        nparray_raw = np.fromstring(packet.raw, np.uint8)
+        image = cv2.imdecode(nparray_raw, 1)
+        founds, weights = self.detect(image)
+
+        if len(founds) > 0:
+            packet.data.append({'pedestrian_detection': [founds.tolist(), weights.tolist()]})
+            self.write(packet)
+
+    def check_daytime(self, current_time, daytime_start, duration):
+        time_now = datetime.datetime.fromtimestamp(current_time)
+        daytime_start = time_now.replace(hour=daytime_start[0], minute=daytime_start[1], second=daytime_start[2])
+
+        diff_in_second = (time_now - daytime_start).total_seconds()
+        if diff_in_second < 0:
+            return False, abs(diff_in_second)
+        elif diff_in_second > duration:
+            return False, 3600 * 24 - diff_in_second # wait until midnight
+        return True, 0
+
+    def run(self):
+        logger.info('Detector initiated')
+        logger.info('Wait until start time comes')
+        while time.time() <= self.options['start_time']:
+            time.sleep(self.options['start_time'] - time.time())
+
+        process_callback = None
+        if self.options['mode'] is MODE_BATCH:
+            process_callback = self.batch_mode_callback
+        elif self.options['mode'] is MODE_BURST:
+            process_callback = self.burst_mode_callback
+
+        daytime_duration = 3600 * 24 # covers one full day; collect all day long
+        daytime_start = [0, 0, 0] # Default
+        try:
+            daytime_start = [int(x) for x in self.options['daytime'][0].split(':')]
+            daytime_end = [int(x) for x in self.options['daytime'][1].split(':')]
+            daytime_duration = (daytime_end[0] - daytime_start[0]) * 3600 + (daytime_end[1] - daytime_start[1]) * 60 + (daytime_end[2] - daytime_start[2])
+        except Exception as ex:
+            logger.error(str(ex))
+
+        logger.info('Detector with %s mode begins...' % (self.options['mode'],))
         packet = None
         try:
             while True:
-                if cap:
-                    f, image = cap.read()
+                current_time = time.time()
+                if current_time - last_updated_time > self.options['interval']:
+                    result, wait_time = self.check_daytime(current_time, daytime_start, daytime_duration)
+                    if result:
+                        f, packet = self.read()
+                        if f:
+                            process_callback(packet)
+                        else:
+                            time.sleep(self.options['interval'])
+                    else:
+                        time.sleep(wait_time)
                 else:
-                    f, packet = self.read()
-                    if f:
-                        nparray_raw = np.fromstring(packet.raw, np.uint8)
-                        image = cv2.imdecode(nparray_raw, 1)
-                if f:
-                    founds, weights = self.perform(image)
-                    if self.options['output']:
-                        save_outputs(image, founds, self.options['output'])
+                    time.sleep(self.options['interval'] - int(current_time - last_updated_time))
 
-                    if len(founds) > 0:
-                        if packet:
-                            packet.data.append({'pedestrian_detection': [founds.tolist(), weights.tolist()]})
-                            self.write(packet)
-
-                    draw_detections(image, founds, thickness=2)
-                    if self.options['interactive']:
-                        while True:
-                            cv2.imshow('result: n to next, q to exit', image)
-                            key = cv2.waitKey(30) & 0xFF
-                            if key == ord('n'):
-                                break
-                            elif key == ord('q'):
-                                return
-                    # else:
-                    #     cv2.imshow('result', image)
-                    #     cv2.waitKey(1)
-                    frame += 1
-                else:
-                    time.sleep(0.1)
-
-                if self.options['verbose']:
-                    end_time = time.time()
-                    if end_time - start_time > 1:
-                        start_time = end_time
-                        logger.info('FPS is %0.2f' % (frame,))
-                        frame = 0
+                if current_time > self.options['end_time']:
+                    logger.info('Detection is done')
+                    break
         except KeyboardInterrupt:
             pass
         except Exception as ex:
             logger.error(str(ex))
 
 
-def interpret_options(args):
-    processor = PedestrianProcessor()
+def save_outputs(image, detections, output_path, extension='.jpg', image_size=(64, 128)):
+    last_file_name_count = len(os.listdir(output_path))
+    for x, y, w, h in detections:
+        cropped_image = image[y:y+h, x:x+w]
+        resized_image = cv2.resize(cropped_image, image_size, interpolation=cv2.INTER_AREA)
+        cv2.imwrite(os.path.join(output_path, str(last_file_name_count).zfill(5) + extension), resized_image, [cv2.IMWRITE_JPEG_QUALITY, 90])
+        last_file_name_count += 1
 
-    if not args.classifier:
-        return False, 'No classifier defined', None
 
-    classifier = Classifier()
-    if not classifier.load_classifier(args.classifier):
-        return False, 'Cannot load classifier %s ' % (args.classifier,), None
-    processor.add_processor(classifier)
-
-    instream = None
-    if args.rabbitmq_exchange:
-        instream = RabbitMQStreamer(logger)
-        instream.config(args.rabbitmq_exchange, args.rabbitmq_routing_in, args.rabbitmq_routing_out)
-        result, message = instream.connect()
-        if result:
-            processor.add_handler(instream, 'in-out')
-        else:
-            return result, 'Cannot run RabbitMQ %s ' % (message,), None
-
-    if instream is None and args.source_camera is None:
-        return False, 'Need an input source either from a camera or rabbitmq exchange', None
-
-    options = {
-        'camera': args.source_camera,
-        'output': args.output_path,
-        'verbose': args.verbose,
-        'interactive': args.interactive
-    }
-    processor.setValues(options)
-
-    return True, '', processor
-
+EXCHANGE = 'image_pipeline'
+ROUTING_KEY_RAW = '0'
+ROUTING_KEY_EXPORT = '9'
 
 def main():
     parser = argparse.ArgumentParser()
 
-    # Classifier option
-    parser.add_argument('-c', dest='classifier', help='Full path of the classifier')
-    
-    # Input source options
-    parser.add_argument('-s', dest='source_camera', help='Camera path')
-    parser.add_argument('--rabbitmq-exchange', dest='rabbitmq_exchange', help='Name of exchange for input')
-    parser.add_argument('--rabbitmq-routing-input', dest='rabbitmq_routing_in', help='Routing key for input')
-
-    # Output source options
-    parser.add_argument('--rabbitmq-routing-output', dest='rabbitmq_routing_out', help='Routing key for output')
-    parser.add_argument('-o', dest='output_path', help='Path to save recognized pedestrians')
-
-    # Other options
-    parser.add_argument('-v', dest='verbose', help='Verbose', action='store_true')
-    parser.add_argument('-i', dest='interactive', help='Show results in display', action='store_true')
+    parser.add_argument('-c', dest='config_file', help='Specify config file')
     args = parser.parse_args()
 
-    result, message, processor = interpret_options(args)
+    config_file = None
+    if args.config_file:
+        config_file = args.config_file
+    else:
+        config_file = '/etc/waggle/image_pedestrian_detection.conf'
 
-    if result is False:
-        logger.error(message)
-        parser.print_help()
+    config = None
+    if os.path.isfile(config_file):
+        try:
+            with open(config_file) as file:
+                config = json.loads(file.read())
+        except Exception as ex:
+            logger.error('Cannot load configuration: %s' % (str(ex),))
+            exit(-1)
+    else:
+        config = default_configuration()
+        with open(config_file, 'w') as file:
+            file.write(json.dumps(config))
+        logger.info('No config specified; default will be used. For detail, check /etc/waggle/image_pedestrian_detection.conf')
+
+    if not os.path.exists(config['classifier']):
+        logger.error('Classifier must be presented')
         exit(-1)
 
+    if config['start_time'] is None or config['end_time'] is None:
+        logger.error('start and end date must be provided')
+        exit(-1)
+
+    try:
+        config['start_time'] = time.mktime(time.strptime(config['start_time'], datetime_format))
+        config['end_time'] = time.mktime(time.strptime(config['end_time'], datetime_format))
+    except Exception as ex:
+        logger.error(str(ex))
+        exit(-1)
+
+    processor = PedestrianDetectionProcessor(config['classifier'])
+    stream = RabbitMQStreamer(logger)
+    stream.config(EXCHANGE, ROUTING_KEY_RAW, ROUTING_KEY_EXPORT)
+    result, message = stream.connect()
+    if result:
+        processor.add_handler(stream, 'in-out')
+    else:
+        logger.error('Cannot run RabbitMQ %s ' % (message,))
+        exit(-1)
+    processor.setValues(config)
     processor.run()
+
+    processor.close()
+    logger.info('Pedestrian detector terminated')
 
 
 if __name__ == '__main__':
