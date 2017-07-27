@@ -128,7 +128,7 @@ class RabbitMQStreamer(Streamer):
             try:
                 method, header, body = self.channel.basic_get(queue=self.queue, no_ack=True)
                 if method is not None:
-                    if isinstance(method, pika.Basic.GetOk):
+                    if isinstance(method, pika.spec.Basic.GetOk):
                         if self.received_packet.full():
                             self.received_packet.get()
                         self.received_packet.put(Packet(body.decode()))

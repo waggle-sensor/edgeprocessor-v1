@@ -24,8 +24,8 @@ logger.addHandler(ch)
 
 def default_configuration():
     conf = {
-        'start_time': time.time(),
-        'end_time': time.time(),
+        'start_time': time.strftime(datetime_format, time.gmtime()),
+        'end_time': time.strftime(datetime_format, time.gmtime()),
         'daytime': ('00:00:00', '23:59:59'),
         'target': 'bottom',
         'interval': 1,

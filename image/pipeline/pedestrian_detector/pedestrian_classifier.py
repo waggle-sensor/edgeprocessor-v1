@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import os
 import time
+import datetime
 import argparse
 import logging
 import pika
@@ -21,6 +22,8 @@ ch = logging.StreamHandler()
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+datetime_format = '%a %b %d %H:%M:%S %Z %Y'
+
 # Run modes
 # batch: Accumulating detection counts during the time period of a day
 MODE_BATCH = 'batch'
@@ -31,13 +34,13 @@ MODE_BURST = 'burst'
 
 def default_configuration():
     conf = {
-        'classifier': '/etc/waggle/pedestrian_classifier.xml'
-        'start_time': time.time(),
-        'end_time': time.time(),
+        'classifier': '/etc/waggle/pedestrian_classifier.xml',
+        'start_time': time.strftime(datetime_format, time.gmtime()),
+        'end_time': time.strftime(datetime_format, time.gmtime()),
         'daytime': ('00:00:00', '23:59:59'),
         'target': 'bottom',
         'interval': 1,
-        'mode': MODE_BURST
+        'mode': MODE_BURST,
         'verbose': False
     }
     return conf
@@ -113,8 +116,14 @@ class PedestrianDetectionProcessor(Processor):
     def detect(self, image):
         return self.detector.classify(image)
 
-    def batch_mode_callback(self, image):
-        pass
+    def batch_mode_callback(self, packet):
+        nparray_raw = np.fromstring(packet.raw, np.uint8)
+        image = cv2.imdecode(nparray_raw, 1)
+        founds, weights = self.detect(image)
+        # simply adds up the detections
+        if len(founds) > 0:
+            self.detection_meta = packet.meta_data
+            self.detection_total += len(founds)
 
     def burst_mode_callback(self, packet):
         nparray_raw = np.fromstring(packet.raw, np.uint8)
@@ -143,9 +152,10 @@ class PedestrianDetectionProcessor(Processor):
             time.sleep(self.options['start_time'] - time.time())
 
         process_callback = None
-        if self.options['mode'] is MODE_BATCH:
+        if self.options['mode'] == MODE_BATCH:
             process_callback = self.batch_mode_callback
-        elif self.options['mode'] is MODE_BURST:
+            self.detection_total = 0
+        elif self.options['mode'] == MODE_BURST:
             process_callback = self.burst_mode_callback
 
         daytime_duration = 3600 * 24 # covers one full day; collect all day long
@@ -160,6 +170,7 @@ class PedestrianDetectionProcessor(Processor):
         logger.info('Detector with %s mode begins...' % (self.options['mode'],))
         packet = None
         try:
+            last_updated_time = time.time()
             while True:
                 current_time = time.time()
                 if current_time - last_updated_time > self.options['interval']:
@@ -177,6 +188,12 @@ class PedestrianDetectionProcessor(Processor):
 
                 if current_time > self.options['end_time']:
                     logger.info('Detection is done')
+                    # For batch mode, send the result when terminated
+                    if self.options['mode'] == MODE_BATCH:
+                        packet = Packet()
+                        packet.meta_data = self.detection_meta
+                        packet.data.append({'pedestrian_detection_batch': [self.detection_total]})
+                        self.write(packet)
                     break
         except KeyboardInterrupt:
             pass
@@ -238,6 +255,7 @@ def main():
         logger.error(str(ex))
         exit(-1)
 
+    logger.info('Loading the classifier: ' + config['classifier'])
     processor = PedestrianDetectionProcessor(config['classifier'])
     stream = RabbitMQStreamer(logger)
     stream.config(EXCHANGE, ROUTING_KEY_RAW, ROUTING_KEY_EXPORT)
