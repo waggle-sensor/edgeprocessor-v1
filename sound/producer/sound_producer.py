@@ -10,12 +10,17 @@ import pyaudio
 import time
 import wave
 import uuid
+import os
+
+import traceback
 
 # The module should be moved to an appropriate location for both image and sound
 import sys
 sys.path.append('../../image')
 # sys.path.append('/usr/lib/waggle/edge_processor/image')
 from processor import *
+
+datetime_format = '%a %b %d %H:%M:%S %Z %Y'
 
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -104,6 +109,8 @@ class SoundCollector(object):
         self.CHANNELS=  2
         self.RATE = 48000
 
+        self.data = []
+
     def connect(self, device):
         self.device = device
         self.audio = pyaudio.PyAudio()
@@ -113,7 +120,9 @@ class SoundCollector(object):
             channels=self.CHANNELS,
             rate=self.RATE,
             input=True,
-            frames_per_buffer=self.CHUNK)
+            # frames_per_buffer=self.CHUNK,
+            stream_callback=self.callback)
+        self.stream.stop_stream()
 
     def open(self, device):
         self.connect(device)
@@ -136,13 +145,25 @@ class SoundCollector(object):
             return None
         return self.jobs_done.get()
 
+    def callback(self, in_data, frame_count, time_info, status):
+        self.data.append(in_data)
+        # print(time_info)
+        # print(in_data)
+        # print('---------------------')
+        return (None, pyaudio.paContinue)
+
     def run(self):
         while self.thread_alive:
             try:
                 if len(self.jobs) > 0:
-                    data = []
-                    for i in range(0, int(self.RATE / self.CHUNK)):
-                        data = self.stream.read(self.CHUNK)
+                    self.data = []
+                    # for i in range(0, int(self.RATE / self.CHUNK)):
+                    #     data.append(self.stream.read(self.CHUNK))
+                    self.stream.start_stream()
+
+                    time.sleep(1)
+
+                    self.stream.stop_stream()
 
                     done = []
                     for job_id in self.jobs:
@@ -150,7 +171,7 @@ class SoundCollector(object):
 
                         current_time = time.time()
                         if current_time < end_time:
-                            buffer.append(data)
+                            buffer.append(self.data)
                         else:
                             done.append(job_id)
                         self.jobs[job_id] = [orderer, buffer, end_time]
@@ -219,13 +240,15 @@ def main():
             
             job_done = collector.get()
             if job_done is not None:
+                # print(job_done)
                 reference = job_done[0]
-                data = job_done[1]
+                data = job_done[1][0]
+                print(data)
                 packet = Packet()
                 packet.meta_data = { 'node_id': '00000',
-                                     'device': os.path.basename(microphone[0]),
+                                     'device': os.path.basename('/dev/waggle_microphone'),
                                      'producer': os.path.basename(__file__),
-                                     'datetime': time.time()}
+                                     'datetime': time.strftime(datetime_format, time.gmtime())}
                 packet.raw = data
                 channel.basic_publish(
                     exchange='sound_pipeline',
@@ -235,6 +258,7 @@ def main():
             time.sleep(0.1)
     except Exception as ex:
         logger.error(str(ex))
+        logger.error(traceback.print_tb())
     except KeyboardInterrupt:
         pass
 

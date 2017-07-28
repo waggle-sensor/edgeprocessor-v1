@@ -53,6 +53,8 @@ class RPCRequester(object):
 
 def on_receive(self, ch, method, props, body):
     logger.info(body)
+    with open('result.wav', 'wb') as file:
+        file.write(body)
 
 def main():
     my_routing_id = str(uuid.uuid4())
@@ -66,7 +68,7 @@ def main():
     channel.queue_bind(queue=result.method.queue, exchange='sound_pipeline', routing_key=my_routing_id)
         
     logger.info('Request sample')
-    ret = rpc.request(5)
+    ret = rpc.request(2)
     logger.info(ret) 
     if b'Ok' in ret:
         logger.info('Wait for the data')
