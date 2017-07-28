@@ -132,6 +132,7 @@ class RabbitMQStreamer(Streamer):
                         if self.received_packet.full():
                             self.received_packet.get()
                         self.received_packet.put(Packet(body.decode()))
+                time.sleep(0.01)
             except pika.exceptions.ConnectionClosed as ex:
                 if self.logger is not None:
                     self.logger.info('RabbitMQ connection closed %s' % (str(ex),))
