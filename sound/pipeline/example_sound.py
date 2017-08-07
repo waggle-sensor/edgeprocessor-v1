@@ -8,7 +8,8 @@ import logging
 import uuid
 
 import sys
-sys.path.append('../../image')
+# sys.path.append('../../image')
+sys.path.append('/Users/theone/repo/edge_processor/image')
 from processor import *
 
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -51,12 +52,24 @@ class RPCRequester(object):
             self.connection.process_data_events()
         return self.response
 
-def on_receive(self, ch, method, props, body):
-    logger.info(body)
-    with open('result.wav', 'wb') as file:
-        file.write(body)
+import wave
+
+def on_receive(method, props, body):
+    message = Packet(body.decode())
+    logger.info(message.meta_data)
+    # logger.info(message.raw)
+    # logger.info(len(message.raw))
+    wf = wave.open('result.wav', 'wb')
+    wf.setnchannels(2)
+    wf.setsampwidth(2)
+    wf.setframerate(48000)
+    wf.writeframes(message.raw)
+    wf.close()
 
 def main():
+    sampling_interval = 30 # seconds
+    wait_time_out = 60 # seconds
+
     my_routing_id = str(uuid.uuid4())
     logger.info('my routing id: %s' % (my_routing_id,))
     rpc = RPCRequester(my_routing_id)
@@ -66,19 +79,28 @@ def main():
     channel.exchange_declare(exchange='sound_pipeline', type='direct')
     result = channel.queue_declare(exclusive=True)
     channel.queue_bind(queue=result.method.queue, exchange='sound_pipeline', routing_key=my_routing_id)
-        
-    logger.info('Request sample')
-    ret = rpc.request(2)
-    logger.info(ret) 
-    if b'Ok' in ret:
-        logger.info('Wait for the data')
+    
+    while True:
+        logger.info('Request a 10 seconds sample')
+        ret = rpc.request(10)
+        logger.info(ret)
+        if b'Ok' in ret:
+            logger.info('Wait for the data for %s' % (my_routing_id,))
+            time_out = time.time() + wait_time_out
+            while time.time() < time_out: 
+                method, header, body = channel.basic_get(queue=result.method.queue, no_ack=True)
+                if method is not None:
+                    logger.info('Received:%s ' % (str(header),))
+                    on_receive(method, header, body)
+                    break
+                time.sleep(0.2)
+            
+            logger.info('Reception is done.')
+        else:
+            logger.error('Error on RPC request')
+        time.sleep(sampling_interval)
 
-        channel.basic_consume(on_receive, no_ack=True, queue=result.method.queue)
-        try:
-            channel.start_consuming()
-        except KeyboardInterrupt:
-            channel.stop_consuming()
-
+    logger.info('Closing example sound...')
     channel.close()
     connection.close()
     rpc.close()

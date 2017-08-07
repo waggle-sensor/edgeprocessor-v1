@@ -110,6 +110,10 @@ class SoundCollector(object):
         self.RATE = 48000
 
         self.data = []
+        # Because the first one or two seconds of recording
+        # gets noise like cranky sounds, a recording should always be
+        # 2 seconds shifted to avoid saving that cranky sounds.
+        self.MAGIC_SKIP_SECONDS = 2
 
     def connect(self, device):
         self.device = device
@@ -138,7 +142,7 @@ class SoundCollector(object):
         self.audio.terminate()
 
     def put(self, orderer, duration):
-        self.jobs[str(uuid.uuid4())] = [orderer, [], time.time() + duration]
+        self.jobs[str(uuid.uuid4())] = [orderer, [], time.time(), time.time() + duration + self.MAGIC_SKIP_SECONDS]
 
     def get(self):
         if self.jobs_done.empty():
@@ -146,11 +150,13 @@ class SoundCollector(object):
         return self.jobs_done.get()
 
     def callback(self, in_data, frame_count, time_info, status):
-        self.data.append(in_data)
+        self.data.extend(in_data)
+        # print(frame_count)
         # print(time_info)
-        # print(in_data)
+        # print(len(in_data))
+        # print(len(self.data))
         # print('---------------------')
-        return (None, pyaudio.paContinue)
+        return (in_data, pyaudio.paContinue)
 
     def run(self):
         while self.thread_alive:
@@ -167,14 +173,19 @@ class SoundCollector(object):
 
                     done = []
                     for job_id in self.jobs:
-                        orderer, buffer, end_time = self.jobs[job_id]
+                        orderer, buffer, start_time, end_time = self.jobs[job_id]
 
                         current_time = time.time()
+                        # ISSUE: first two seconds of an audio stream has
+                        # cranky sound
+                        if int(abs(current_time - start_time)) < self.MAGIC_SKIP_SECONDS:
+                            continue
                         if current_time < end_time:
-                            buffer.append(self.data)
+                            print(len(self.data))
+                            buffer.extend(self.data)
                         else:
                             done.append(job_id)
-                        self.jobs[job_id] = [orderer, buffer, end_time]
+                        self.jobs[job_id] = [orderer, buffer, start_time, end_time]
 
                     for job_id in done:
                         self.jobs_done.put(self.jobs.pop(job_id))
@@ -240,20 +251,18 @@ def main():
             
             job_done = collector.get()
             if job_done is not None:
-                # print(job_done)
-                reference = job_done[0]
-                data = job_done[1][0]
-                print(data)
+                reference, data, start_time, end_time = job_done
                 packet = Packet()
                 packet.meta_data = { 'node_id': '00000',
                                      'device': os.path.basename('/dev/waggle_microphone'),
                                      'producer': os.path.basename(__file__),
                                      'datetime': time.strftime(datetime_format, time.gmtime())}
-                packet.raw = data
+                packet.raw = bytearray(data)
                 channel.basic_publish(
                     exchange='sound_pipeline',
                     routing_key=reference,
                     body=packet.output())
+                logger.info('Recorded audio is sent to %s' % (reference,))
             
             time.sleep(0.1)
     except Exception as ex:
