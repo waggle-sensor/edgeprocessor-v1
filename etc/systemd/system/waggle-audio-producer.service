@@ -1,0 +1,12 @@
+[Unit]
+Description=Audio Producer
+After=waggle-platform.target
+
+[Service]
+ExecStart=/usr/bin/python3 -u /usr/lib/waggle/edge_processor/audio/producer/audio_producer.py
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=waggle-platform.target
