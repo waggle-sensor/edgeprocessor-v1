@@ -32,7 +32,7 @@ cp -r ${current_dir}/etc/rabbitmq /etc
 
 # copy systemd scripts
 cp ${current_dir}/etc/systemd/system/* /etc/systemd/system
-systemctl enable waggle-test.service
+systemctl disable waggle-test.service
 systemctl enable waggle-image-producer.service
 systemctl enable waggle-image-exporter.service
 
