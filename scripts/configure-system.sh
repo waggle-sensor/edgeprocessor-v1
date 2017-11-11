@@ -4,6 +4,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # this will make sure that an empty eMMC card will get the waggle image
 touch /root/do_recovery
+touch /root/waggle_platform_starter
 
 echo -e "10.31.81.10\tnodecontroller" >> /etc/hosts
 

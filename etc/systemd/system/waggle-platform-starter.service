@@ -1,0 +1,19 @@
+[Unit]
+Description=waggle platform starter
+After=waggle-core.target waggle-init.service network.target
+Before=waggle-platform.target
+
+# stop the service once the credential has been removed
+# (post successful registration)
+ConditionPathExists=/root/waggle_platform_starter
+
+[Service]
+WorkingDirectory=/usr/lib/waggle/edge_processor/scripts
+ExecStart=/usr/lib/waggle/edge_processor/scripts/waggle-platform-starter-service --force
+
+# keep trying if there was a fatal error during an attempt to register
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=waggle-core.target

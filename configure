@@ -35,6 +35,7 @@ cp ${current_dir}/etc/systemd/system/* /etc/systemd/system
 systemctl disable waggle-test.service
 systemctl enable waggle-image-producer.service
 systemctl enable waggle-image-exporter.service
+systemctl enable waggle-platform-starter.service
 
 # copy udev rules
 cp ${current_dir}/etc/udev/rules.d/* /etc/udev/rules.d
