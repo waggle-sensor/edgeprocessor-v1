@@ -3,6 +3,7 @@ import argparse
 import logging
 import subprocess
 import os
+from waggle.protocol.utils.pidfile import PidFile, AlreadyRunning
 
 logger = logging.getLogger("waggle-platform-starter service")
 logger.setLevel(logging.INFO)
@@ -24,7 +25,9 @@ def check_starter():
         rc, out = call('/usr/lib/waggle/core/scripts/waggle-fs-lock')
 
 if __name__ == "__main__":
-
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--force', dest='force', help='kill other processes and start', action='store_true')
+    args = parser.parse_args()
     try:
         pid_file = "/var/run/waggle/communications.pid"
         with PidFile(pid_file, force=args.force, name=os.path.basename(__file__)):
