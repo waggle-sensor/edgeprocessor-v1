@@ -217,7 +217,7 @@ def open_pipeline_connection():
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
 
-    channel.exchange_declare(exchange='sound_pipeline', type='direct')
+    channel.exchange_declare(exchange='sound_pipeline', exchange_type='direct')
     return channel
 
 def main():

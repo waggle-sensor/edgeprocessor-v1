@@ -45,7 +45,7 @@ def main():
   connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
   channel = connection.channel()
 
-  channel.exchange_declare(exchange='image_pipeline', type='direct')
+  channel.exchange_declare(exchange='image_pipeline', exchange_type='direct')
 
   cam_capture = {}
   for camera_device in camera_devices:
