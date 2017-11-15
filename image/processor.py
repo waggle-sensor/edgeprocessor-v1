@@ -11,7 +11,7 @@ class Packet(object):
     META = 'meta_data'
     RESULTS = 'results'
     RAW = 'raw'
-    def __init__ (self, binary_packet=None):
+    def __init__(self, binary_packet=None):
         self.meta_data = {}
         self.data = []
         self.raw = None
@@ -59,20 +59,12 @@ class RabbitMQStreamer(Streamer):
         self.routing_in = None
         self.routing_out = None
         self.queue = None
-
         self.logger = logger
-
-        self.received_packet = queue.Queue(1)
-        self.thread = threading.Thread(target=self.run)
-        self.thread_alive = False
 
     def open(self, **args):
         pass
 
     def close(self):
-        self.thread_alive = False
-        if self.thread is not None:
-            self.thread.join()
         if self.connection is not None:
             if self.connection.is_open:
                 self.connection.close()
@@ -89,22 +81,34 @@ class RabbitMQStreamer(Streamer):
             if input_exchange_declare:
                 self.channel.exchange_declare(exchange=self.exchange, exchange_type='direct')
 
-            result = self.channel.queue_declare(exclusive=True)
+            result = self.channel.queue_declare(exclusive=True, arguments={'x-max-length': 1})
             self.queue = result.method.queue
             self.channel.queue_bind(queue=self.queue, exchange=self.exchange, routing_key=self.routing_in)
-            if not self.thread.is_alive():
-                self.thread_alive = True
-                self.thread.start()
         except Exception as ex:
             return False, str(ex)
         return True, ''
 
     def read(self):
-        if self.received_packet.empty():
-            return False, None
-
-        return True, self.received_packet.get()
-
+        try:
+            method, header, body = self.channel.basic_get(queue=self.queue, no_ack=True)
+            if method is not None:
+                if isinstance(method, pika.spec.Basic.GetOk):
+                    return True, Packet(body.decode())
+                return False, ''
+            else:
+                return False, ''
+        except pika.exceptions.ConnectionClosed as ex:
+            if self.logger is not None:
+                self.logger.info('RabbitMQ connection closed %s' % (str(ex),))
+                self.logger.info('Restarting RabbitMQ consumption in 5 seconds...')
+            self.connect()
+            return False, 'ConnectionClosed'
+        except Exception as ex:
+            if self.logger is not None:
+                self.logger.info('RabbitMQ consumption failed %s' % (str(ex),))
+                self.logger.info('Restarting RabbitMQ consumption in 5 seconds...')
+            return False, str(ex)
+        
     def write(self, data):
         try:
             self.channel.basic_publish(exchange=self.exchange, routing_key=self.routing_out, body=data)
@@ -114,36 +118,6 @@ class RabbitMQStreamer(Streamer):
                 self.logger.error('Could not write %s: %s' % (str(data), str(ex)))
             return False
 
-    def run(self):
-        if self.channel is None:
-            if self.logger:
-                self.logger.error('RabbitMQ channel is None')
-            return
-        if not self.channel.is_open:
-            if self.logger:
-                self.logger.error('RabbitMQ channel is not opened')
-            return
-
-        while self.thread_alive:
-            try:
-                method, header, body = self.channel.basic_get(queue=self.queue, no_ack=True)
-                if method is not None:
-                    if isinstance(method, pika.spec.Basic.GetOk):
-                        if self.received_packet.full():
-                            self.received_packet.get()
-                        self.received_packet.put(Packet(body.decode()))
-                time.sleep(0.01)
-            except pika.exceptions.ConnectionClosed as ex:
-                if self.logger is not None:
-                    self.logger.info('RabbitMQ connection closed %s' % (str(ex),))
-                    self.logger.info('Restarting RabbitMQ consumption in 5 seconds...')
-                time.sleep(5)
-                self.connect()
-            except Exception as ex:
-                if self.logger is not None:
-                    self.logger.info('RabbitMQ consumption failed %s' % (str(ex),))
-                    self.logger.info('Restarting RabbitMQ consumption in 5 seconds...')
-                time.sleep(5)
 
 class Processor(object):
     def __init__(self):
