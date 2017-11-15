@@ -87,7 +87,7 @@ class RabbitMQStreamer(Streamer):
             self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=host))
             self.channel = self.connection.channel()
             if input_exchange_declare:
-                self.channel.exchange_declare(exchange=self.exchange, type='direct')
+                self.channel.exchange_declare(exchange=self.exchange, exchange_type='direct')
 
             result = self.channel.queue_declare(exclusive=True)
             self.queue = result.method.queue

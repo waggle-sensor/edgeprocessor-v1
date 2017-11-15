@@ -41,7 +41,7 @@ def generate_meta_data(meta_data, results):
 
   exif = exif_dict['Exif']
   if results is not []:
-    exif[piexif.ExifIFD.UserComment] = json.dumps({'results': results})
+    exif[piexif.ExifIFD.UserComment] = json.dumps({'results': results}).encode()
   # exif[piexif.ExifIFD.DateTimeOriginal] = time.strftime('%Y:%m:%d %H:%M:%S',
   #                                                       time.gmtime())  # YYYY:MM:DD HH:MM:SS date time
   exif_dict['Exif'] = exif
