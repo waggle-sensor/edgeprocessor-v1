@@ -17,12 +17,8 @@ def check_starter():
     starter = '/root/waggle_platform_starter'
     if os.path.isfile(starter):
         os.remove(starter)
-        logger.info('Setting default target to waggle-platform')
-        rc, out = call('systemctl set-default waggle-platform.target')
-        logger.info('Isolating waggle-platform target')
-        rc, out = call('systemctl isolate waggle-platform.target')
-        logger.info('Locking fielsystem')
-        rc, out = call('/usr/lib/waggle/core/scripts/waggle-fs-lock')
+        logger.info('Switching to operation mode')
+        rc, out = call('waggle-switch-to-operation-mode')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
