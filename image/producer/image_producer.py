@@ -17,7 +17,7 @@ def main():
   if len(camera_devices) == 0:
     raise Exception('no available cameras detected')
 
-  capture_config_file = '/etc/waggle/image_capture.conf'
+  capture_config_file = '/wagglrw/waggle/image_capture.conf'
   capture_config = None
   if os.path.isfile(capture_config_file):
     with open(capture_config_file) as config:
