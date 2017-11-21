@@ -1,6 +1,6 @@
 #!/bin/bash
 skip_frames=20
-mkdir -p /root/camera/
-fswebcam -d /dev/waggle_cam_top -S $skip_frames --subtitle $(hostname) -r 3264x2448 --jpeg -1 -D 0 /root/camera/c_top_$(hostname)_$(date +%s).jpg
-fswebcam -d /dev/waggle_cam_bottom -S $skip_frames --subtitle $(hostname) -r 3264x2448 --jpeg -1 -D 0 /root/camera/c_bottom_$(hostname)_$(date +%s).jpg
+mkdir -p /wagglerw/camera/
+fswebcam -d /dev/waggle_cam_top -S $skip_frames --subtitle $(hostname) -r 3264x2448 --jpeg -1 -D 0 /wagglerw/camera/c_top_$(hostname)_$(date +%s).jpg
+fswebcam -d /dev/waggle_cam_bottom -S $skip_frames --subtitle $(hostname) -r 3264x2448 --jpeg -1 -D 0 /wagglerw/camera/c_bottom_$(hostname)_$(date +%s).jpg
 
