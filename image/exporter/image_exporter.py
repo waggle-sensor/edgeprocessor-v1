@@ -20,7 +20,7 @@ null_exif = {
   '1st': {},
   'thumbnail': None
 }
-copy_right = 'Copyright to Waggle (http://wa8.gl) and Array of Things (). Do not use without explicit permission'
+copy_right = 'Waggle (http://wa8.gl) and Array of Things (https://arrayofthings.github.io). Do not use without explicit permission'
 
 
 def generate_meta_data(meta_data, results):
@@ -38,6 +38,8 @@ def generate_meta_data(meta_data, results):
     oth[piexif.ImageIFD.Software] = meta_data['producer']
   if 'datetime' in meta_data:
     oth[piexif.ImageIFD.DateTime] = meta_data['datetime']
+  if 'processing_software' in meta_data:
+    oth[piexif.ImageIFD.ProcessingSoftware] = meta_data['processing_software']
   oth[piexif.ImageIFD.Copyright] = copy_right
   exif_dict['0th'] = oth
 

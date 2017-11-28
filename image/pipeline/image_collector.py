@@ -101,6 +101,7 @@ class ImageCollectionProcessor(Processor):
                             if 'device' in packet.meta_data:
                                 device = packet.meta_data['device']
                                 if self.options['target'] in device:
+                                    packet.meta_data.update({'processing_software': os.path.basename(__file__)})
                                     self.write(packet)
                                     last_updated_time = current_time
                         else:
@@ -131,7 +132,7 @@ def main():
     if args.config_file:
         config_file = args.config_file
     else:
-        config_file = '/etc/waggle/image_collector.conf'
+        config_file = '/wagglerw/waggle/image_collector.conf'
     
     config = None
     if os.path.isfile(config_file):
@@ -145,7 +146,7 @@ def main():
         config = default_configuration()
         with open(config_file, 'w') as file:
             file.write(json.dumps(config))
-        logger.info('No config specified; default will be used. For detail, check /etc/waggle/image_collector.conf')
+        logger.info('No config specified; default will be used. For detail, check /wagglerw/waggle/image_collector.conf')
     
     if config['start_time'] is None or config['end_time'] is None:
         logger.error('start and end date must be provided')

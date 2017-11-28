@@ -1,9 +1,6 @@
 [Unit]
 Description=Audio clip collector
-After=waggle-platform.target
 
 [Service]
-ExecStart=/usr/bin/python3 -u /usr/lib/waggle/edge_processor/audio/pipeline/example_audio.py
-
-[Install]
-WantedBy=waggle-platform.target
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/lib/waggle/edge_processor/audio/pipeline/example_audio.py
