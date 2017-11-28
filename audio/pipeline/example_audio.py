@@ -77,7 +77,7 @@ def main():
     
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
-    channel.exchange_declare(exchange='sound_pipeline', type='direct')
+    channel.exchange_declare(exchange='sound_pipeline', exchange_type='direct')
     result = channel.queue_declare(exclusive=True)
     channel.queue_bind(queue=result.method.queue, exchange='sound_pipeline', routing_key=my_routing_id)
     

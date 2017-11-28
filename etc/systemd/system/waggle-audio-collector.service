@@ -2,5 +2,5 @@
 Description=Audio clip collector
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStart=/usr/bin/python3 /usr/lib/waggle/edge_processor/audio/pipeline/example_audio.py
