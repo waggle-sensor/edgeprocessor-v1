@@ -15,7 +15,7 @@ sys.path.append('/usr/lib/waggle/edge_processor/image')
 from processor import *
 
 graceful_signal_to_kill = False
-datetime_format = '%Y/%m/%d %H:%M:%S'
+datetime_format = '%Y-%m-%d %H:%M:%S'
 
 def main():
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
