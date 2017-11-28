@@ -81,7 +81,7 @@ def main():
 
   script_dir = os.path.dirname(os.path.abspath(__file__))
 
-  export_stage_path = '/etc/waggle/export_stage'
+  export_stage_path = '/wagglerw/waggle/image_export_stage'
   if os.path.isfile(export_stage_path):
     with open(export_stage_path) as export_stage_file:
       export_stage = export_stage_file.read()
