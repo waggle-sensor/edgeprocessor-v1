@@ -117,25 +117,19 @@ class RabbitMQStreamer(Streamer):
                 method, header, body = self.channel.basic_get(queue=self.queue, no_ack=True)
                 if method is not None:
                     if isinstance(method, pika.spec.Basic.GetOk):
-                        return True, Packet(body.decode())
-                    return False, ''
-                else:
-                    return False, ''
+                        self.last_message = Packet(body.decode())
             except pika.exceptions.ConnectionClosed as ex:
                 if self.logger is not None:
                     self.logger.info('RabbitMQ connection closed %s' % (str(ex),))
                     self.logger.info('Restarting RabbitMQ consumption in 5 seconds...')
                 time.sleep(5)
                 self.connect()
-                return False, 'ConnectionClosed'
             except Exception as ex:
                 if self.logger is not None:
                     self.logger.info('RabbitMQ consumption failed %s' % (str(ex),))
                     self.logger.info('Restarting RabbitMQ consumption in 5 seconds...')
                 time.sleep(5)
-                return False, str(ex)
             time.sleep(1)
-
 
 class Processor(object):
     def __init__(self):
