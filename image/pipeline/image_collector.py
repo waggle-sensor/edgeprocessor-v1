@@ -105,8 +105,9 @@ class ImageCollectionProcessor(Processor):
                                     self.write(packet)
                                     last_updated_time = current_time
                         else:
-                            time.sleep(self.options['interval'])
+                            time.sleep(1)
                     else:
+
                         time.sleep(wait_time)
                 else:
                     time.sleep(0.5)
