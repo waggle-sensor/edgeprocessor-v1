@@ -88,7 +88,7 @@ class ImageCollectionProcessor(Processor):
 
         logger.info('Collection started')
         try:
-            last_updated_time = time.time()
+            last_updated_time = time.time() - self.options['interval'] - 1
             while True:
                 current_time = time.time()
                 if current_time - last_updated_time > self.options['interval']:
