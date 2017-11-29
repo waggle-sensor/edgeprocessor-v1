@@ -98,7 +98,7 @@ class RabbitMQStreamer(Streamer):
 
     def read(self):
         if self.last_message is not None:
-            return True, self.last_message
+            return True, Packet(self.last_message)
         else:
             return False, ''
         
@@ -117,7 +117,7 @@ class RabbitMQStreamer(Streamer):
                 method, header, body = self.channel.basic_get(queue=self.queue, no_ack=True)
                 if method is not None:
                     if isinstance(method, pika.spec.Basic.GetOk):
-                        self.last_message = Packet(body.decode())
+                        self.last_message = body.decode()
             except pika.exceptions.ConnectionClosed as ex:
                 if self.logger is not None:
                     self.logger.info('RabbitMQ connection closed %s' % (str(ex),))
