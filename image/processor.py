@@ -62,6 +62,7 @@ class RabbitMQStreamer(Streamer):
         self.logger = logger
         self.listener = None
         self.last_message = None
+        self.out_queue = queue.Queue()
 
     def open(self, **args):
         pass
@@ -105,16 +106,21 @@ class RabbitMQStreamer(Streamer):
             return False, ''
         
     def write(self, data):
-        try:
-            self.channel.basic_publish(exchange=self.exchange, routing_key=self.routing_out, body=data)
-            return True
-        except Exception as ex:
-            if self.logger:
-                self.logger.error('Could not write %s: %s' % (str(data), str(ex)))
-            return False
+        self.out_queue.put(data)
 
     def run(self):
         while self.is_alive:
+            # Flush any pending messages
+            while not self.out_queue.empty():
+                data = self.out_queue.get()
+                try:
+                    self.channel.basic_publish(exchange=self.exchange, routing_key=self.routing_out, body=data)
+                except Exception as ex:
+                    if self.logger:
+                        self.logger.error('Could not write %s: %s' % (str(data), str(ex)))
+                    break
+
+            # Handle any incoming messages
             try:
                 method, header, body = self.channel.basic_get(queue=self.queue, no_ack=True)
                 if method is not None:
