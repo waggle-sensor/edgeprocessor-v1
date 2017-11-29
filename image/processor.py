@@ -98,7 +98,9 @@ class RabbitMQStreamer(Streamer):
 
     def read(self):
         if self.last_message is not None:
-            return True, Packet(self.last_message)
+            packet = Packet(self.last_message)
+            self.last_message = None
+            return True, packet
         else:
             return False, ''
         
