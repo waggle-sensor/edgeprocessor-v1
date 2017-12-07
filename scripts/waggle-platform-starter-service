@@ -3,7 +3,7 @@ import argparse
 import logging
 import subprocess
 import os
-from waggle.protocol.utils.pidfile import PidFile, AlreadyRunning
+from waggle.protocol.v4.pidfile import PidFile, AlreadyRunning
 
 logger = logging.getLogger("waggle-platform-starter service")
 logger.setLevel(logging.INFO)
