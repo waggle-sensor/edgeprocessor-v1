@@ -59,9 +59,9 @@ class ImageCollectionProcessor(Processor):
 
     def close(self):
         for in_handler in self.input_handler:
-            in_handler.close()
+            self.input_handler[in_handler].close()
         for out_handler in self.output_handler:
-            out_handler.close()
+            self.output_handler[out_handler].close()
 
     def read(self, from_stream):
         if from_stream not in self.input_handler:
@@ -101,21 +101,22 @@ class ImageCollectionProcessor(Processor):
                 current_time = time.time()
 
                 for device in self.config:
-                    device_option = self.options[device]
+                    device_option = self.config[device]
 
                     if current_time - device_option['last_updated_time'] > device_option['interval']:
                         result, wait_time = self.check_daytime(current_time, device_option['daytime'])
 
                         if result:
-                            print('hello')
-                            # f, packet = self.read(device)
-                            # if f:
-                            #     packet.meta_data.update({'processing_software': os.path.basename(__file__)})
-                            #     self.write(packet)
-                            #     device_option['last_updated_time'] = current_time
+                            f, packet = self.read(device)
+                            if f:
+                                packet.meta_data.update({'processing_software': os.path.basename(__file__)})
+                                self.write(packet)
+                                device_option['last_updated_time'] = current_time
+                                if device_opeion['verbose']:
+                                    logger.info('An image from %s has been sent' % (device,))
                         else:
-                            device_option['last_updated_time'] = current_time + wait_time
-                    self.options[device] = device_option
+                            device_option['last_updated_time'] = current_time + min(wait_time, device_option['interval'])
+                    self.config[device] = device_option
 
                 time.sleep(1)
             except KeyboardInterrupt:
