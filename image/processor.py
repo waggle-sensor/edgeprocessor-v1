@@ -142,14 +142,14 @@ class RabbitMQStreamer(Streamer):
 class Processor(object):
     def __init__(self):
         self.processor = None
-        self.input_handler = []
-        self.output_handler = []
+        self.input_handler = {}
+        self.output_handler = {}
 
-    def add_handler(self, handler, handler_type='in-out'):
+    def add_handler(self, handler, handler_name, handler_type='in-out'):
         if 'in' in handler_type:
-            self.input_handler.append(handler)
+            self.input_handler[handler_name] = handler
         if 'out' in handler_type:
-            self.output_handler.append(handler)
+            self.output_handler[handler_name] = handler
 
     def run(self):
         raise NotImplmented('Run method should be implemented')

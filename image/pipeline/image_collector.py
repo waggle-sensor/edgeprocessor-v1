@@ -23,13 +23,16 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 def default_configuration():
-    conf = {
-        'start_time': time.strftime(datetime_format, time.gmtime()),
-        'end_time': time.strftime(datetime_format, time.gmtime()),
-        'daytime': ('00:00:00', '23:59:59'),
-        'target': 'bottom',
-        'interval': 1,
-        'verbose': False
+    conf = {'top': {
+            'daytime': [('12:00:00', '23:00:00')], # 6 AM to 7 PM in Chicago
+            'interval': 3600,                       # every 60 mins
+            'verbose': False
+        },
+        'bottom': {
+            'daytime': [('12:00:00', '23:00:00')], # 6 AM to 7 PM in Chicago
+            'interval': 900,                        # every 15 mins
+            'verbose': False
+        }
     }
     return conf
 
@@ -37,10 +40,22 @@ def default_configuration():
 class ImageCollectionProcessor(Processor):
     def __init__(self):
         super().__init__()
-        self.options = default_configuration()
 
-    def setValues(self, options):
-        self.options.update(options)
+    def set_configs(self, configs):
+        for device in configs:
+            device_option = configs[device]
+            durations = []
+            for start, end in device_option['daytime']:
+                try:
+                    start_sp = start.split(':')
+                    end_sp = end.split(':')
+                    durations.append(((int(start_sp[0]), int(start_sp[1]), int(start_sp[2])), (int(end_sp[0]), int(end_sp[1]), int(end_sp[2]))))
+                except:
+                    durations = [((0, 0, 0), (23, 59, 59))]
+                    break
+            device_option['daytime'] = durations
+            configs[device] = device_option
+        self.config = configs
 
     def close(self):
         for in_handler in self.input_handler:
@@ -48,80 +63,69 @@ class ImageCollectionProcessor(Processor):
         for out_handler in self.output_handler:
             out_handler.close()
 
-    def read(self):
-        for stream in self.input_handler:
-            if stream is None:
-                return False, None
-            return stream.read()
+    def read(self, from_stream):
+        if from_stream not in self.input_handler:
+            return False, None
 
-    def write(self, packet):
-        for stream in self.output_handler:
-            if stream is None:
-                return False
-            stream.write(packet.output())
-            if self.options['verbose']:
-                logger.info('A packet is sent to output')
+        return self.input_handler[from_stream].read()
+        
+    def write(self, packet, to_stream):
+        if to_stream not in self.output_handler:
+            return False
 
-    def check_daytime(self, current_time, daytime_start, duration):
+        self.output_handler[to_stream].write(packet.output())
+
+    def check_daytime(self, current_time, durations):
         time_now = datetime.datetime.fromtimestamp(current_time)
-        daytime_start = time_now.replace(hour=daytime_start[0], minute=daytime_start[1], second=daytime_start[2])
-
-        diff_in_second = (time_now - daytime_start).total_seconds()
-        if diff_in_second < 0:
-            return False, abs(diff_in_second)
-        elif diff_in_second > duration:
-            return False, 3600 * 24 - diff_in_second # wait until midnight
-        return True, 0
+        time_start = time_end = None
+        for start, end in durations:
+            start_hours, start_minutes, start_seconds = start
+            end_hours, end_minutes, end_seconds = end
+            time_start = time_now.replace(hour=start_hours, minute=start_minutes, second=start_seconds)
+            time_end = time_now.replace(hour=end_hours, minute=end_minutes, second=end_seconds)
+            if time_start <= time_now <= time_end:
+                return True, 0
+            elif time_start > time_now:
+                return False, int((time_start - time_now).total_seconds())
+        end_of_today = time_now.replace(hour=23, minute=59, second=59)
+        return False, int((end_of_today - time_now).total_seconds())
 
     def run(self):
-        while time.time() <= self.options['start_time']:
-            time.sleep(self.options['start_time'] - time.time())
-
-        daytime_duration = 3600 * 24 # covers one full day; collect all day long
-        daytime_start = [0, 0, 0] # Default
-        try:
-            daytime_start = [int(x) for x in self.options['daytime'][0].split(':')]
-            daytime_end = [int(x) for x in self.options['daytime'][1].split(':')]
-            daytime_duration = (daytime_end[0] - daytime_start[0]) * 3600 + (daytime_end[1] - daytime_start[1]) * 60 + (daytime_end[2] - daytime_start[2])
-        except Exception as ex:
-            logger.error(str(ex))
+        for device in self.config:
+            device_option = self.config[device]
+            device_option['last_updated_time'] = time.time() - device_option['interval'] - 1
 
         logger.info('Collection started')
-        try:
-            last_updated_time = time.time() - self.options['interval'] - 1
-            while True:
+        while True:
+            try:
                 current_time = time.time()
-                if current_time - last_updated_time > self.options['interval']:
-                    # Check if now is in the daytime
-                    result, wait_time = self.check_daytime(current_time, daytime_start, daytime_duration)
-                    if result:
-                        f, packet = self.read()
-                        if f:
-                            # Check if the image is the target
-                            if 'device' in packet.meta_data:
-                                device = packet.meta_data['device']
-                                if self.options['target'] in device:
-                                    packet.meta_data.update({'processing_software': os.path.basename(__file__)})
-                                    self.write(packet)
-                                    last_updated_time = current_time
-                        else:
-                            time.sleep(1)
-                    else:
 
-                        time.sleep(wait_time)
-                else:
-                    time.sleep(0.5)
-                if current_time > self.options['end_time']:
-                    logger.info('Collection is done')
-                    break
-        except KeyboardInterrupt:
-            pass
-        except Exception as ex:
-            logger.error(str(ex))
+                for device in self.config:
+                    device_option = self.options[device]
+
+                    if current_time - device_option['last_updated_time'] > device_option['interval']:
+                        result, wait_time = self.check_daytime(current_time, device_option['daytime'])
+
+                        if result:
+                            print('hello')
+                            # f, packet = self.read(device)
+                            # if f:
+                            #     packet.meta_data.update({'processing_software': os.path.basename(__file__)})
+                            #     self.write(packet)
+                            #     device_option['last_updated_time'] = current_time
+                        else:
+                            device_option['last_updated_time'] = current_time + wait_time
+                    self.options[device] = device_option
+
+                time.sleep(1)
+            except KeyboardInterrupt:
+                break
+            except Exception as ex:
+                logger.error(str(ex))
+                break
 
 EXCHANGE = 'image_pipeline'
-ROUTING_KEY_RAW = '0'
-ROUTING_KEY_EXPORT = '9'
+ROUTING_KEY_EXPORT = 'exporter'
 
 def main():
     parser = argparse.ArgumentParser()
@@ -147,29 +151,22 @@ def main():
         config = default_configuration()
         with open(config_file, 'w') as file:
             file.write(json.dumps(config))
-        logger.info('No config specified; default will be used. For detail, check /wagglerw/waggle/image_collector.conf')
-    
-    if config['start_time'] is None or config['end_time'] is None:
-        logger.error('start and end date must be provided')
-        exit(-1)
-
-    try:
-        config['start_time'] = time.mktime(time.strptime(config['start_time'], datetime_format))
-        config['end_time'] = time.mktime(time.strptime(config['end_time'], datetime_format))
-    except Exception as ex:
-        logger.error(str(ex))
-        exit(-1)
+        logger.info('No config specified; default will be used. For detail, check %s' % (config_file,))
 
     processor = ImageCollectionProcessor()
-    stream = RabbitMQStreamer(logger)
-    stream.config(EXCHANGE, ROUTING_KEY_RAW, ROUTING_KEY_EXPORT)
-    result, message = stream.connect()
-    if result:
-        processor.add_handler(stream, 'in-out')
-    else:
-        logger.error('Cannot run RabbitMQ %s ' % (message,))
-        exit(-1)
-    processor.setValues(config)
+
+    for device in config:
+        try:
+            stream = RabbitMQStreamer(logger)
+            stream.config(EXCHANGE, device, ROUTING_KEY_EXPORT)
+            result, message = stream.connect()
+            if result:
+                processor.add_handler(stream, handler_name=device, handler_type='in-out')
+            else:
+                logger.error('Unable to set streamer for %s:%s ' % (device, message))
+                stream.close()
+
+    processor.set_configs(config)
     processor.run()
 
     processor.close()
