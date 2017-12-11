@@ -49,14 +49,18 @@ def main():
 
   cam_capture = {}
   for camera_device in camera_devices:
-    try:
-      cap = cv2.VideoCapture(camera_device)
-      config = [capture_config[x] for x in capture_config if x in camera_device]
-      if config is not []:
-        config = config[0]
+    try:      
+      config = []
+      for camera in capture_config:
+        if camera in camera_device:
+          config = capture_config[camera]
+          config.update({'device':camera})
+
+      if isinstance(config, dict):
         resolution = config['resolution'].split('x')
         config['width'] = resolution[0]
         config['height'] = resolution[1]
+        cap = cv2.VideoCapture(camera_device)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(config['width']))
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, int(config['height']))
         cam_capture[camera_device] = [cap, config, time.time() - config['interval'], 0]
@@ -87,6 +91,7 @@ def main():
                                      'producer': os.path.basename(__file__),
                                      'datetime': time.strftime(datetime_format, time.gmtime())}
             packet.raw = byte_frame
+
             channel.basic_publish(exchange='image_pipeline', routing_key=device, body=packet.output())
           else:
             failure_count += 1
