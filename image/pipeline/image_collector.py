@@ -74,6 +74,7 @@ class ImageCollectionProcessor(Processor):
             return False
 
         self.output_handler[to_stream].write(packet.output())
+        return True
 
     def check_daytime(self, current_time, durations):
         time_now = datetime.datetime.fromtimestamp(current_time)
@@ -112,8 +113,8 @@ class ImageCollectionProcessor(Processor):
                                 packet.meta_data.update({'processing_software': os.path.basename(__file__)})
                                 self.write(packet)
                                 device_option['last_updated_time'] = current_time
-                                if device_opeion['verbose']:
-                                    logger.info('An image from %s has been sent' % (device,))
+                                if device_option['verbose']:
+                                    logger.info('An image from %s has been published' % (device,))
                         else:
                             device_option['last_updated_time'] = current_time + min(wait_time, device_option['interval'])
                     self.config[device] = device_option

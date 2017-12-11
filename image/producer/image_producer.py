@@ -32,10 +32,10 @@ def main():
     with open(capture_config_file) as config:
       capture_config = json.loads(config.read())
   else:
-    capture_config = {'top':{'resolution':'1024x768', 'skip_frames':20, , 'rotate': 0, 'factor':90,
-                             'interval':3600},
-                      'bottom':{'resolution':'1920x1080', 'skip_frames':5, 'rotate': 180, 'factor':90,
-                                'interval':900}}
+    capture_config = {'top':{'resolution':'3264x2448', 'skip_frames':20, 'rotate': 0, 'factor':90,
+                             'interval':10},
+                      'bottom':{'resolution':'2592x1944', 'skip_frames':20, 'rotate': 180, 'factor':90,
+                                'interval':10}}
     with open(capture_config_file, 'w') as config:
       config.write(json.dumps(capture_config))
 
@@ -74,7 +74,9 @@ def main():
           cam_capture[device] = [cap, config, last_updated, failure_count]
           f, frame = cap.read()
           if f:
-            byte_frame = cv2.imencode('.jpg', frame)[1].tostring()
+            rows, cols = frame.shape[:2]
+            rotated_frame = cv2.getRotationMatrix2D((cols/2, rows/2), config['rotate'], 1)
+            byte_frame = cv2.imencode('.jpg', rotated_frame)[1].tostring()
 
             logging.info("inserting {} camera image into processing pipeline...".format(device))
             packet = Packet()
