@@ -90,7 +90,7 @@ def main():
     with open(export_stage_path) as export_stage_file:
       export_stage = export_stage_file.read()
   else:
-    export_stage = '9'
+    export_stage = 'exporter'
 
   connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
   channel = connection.channel()

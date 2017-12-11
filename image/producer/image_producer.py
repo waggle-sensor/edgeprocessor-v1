@@ -32,10 +32,10 @@ def main():
     with open(capture_config_file) as config:
       capture_config = json.loads(config.read())
   else:
-    capture_config = {'top':{'resolution':'1024x768', 'skip_frames':5, 'factor':90,
-                             'interval':1800},
-                      'bottom':{'resolution':'1920x1080', 'skip_frames':5, 'factor':90,
-                                'interval':1800}}
+    capture_config = {'top':{'resolution':'1024x768', 'skip_frames':20, , 'rotate': 0, 'factor':90,
+                             'interval':3600},
+                      'bottom':{'resolution':'1920x1080', 'skip_frames':5, 'rotate': 180, 'factor':90,
+                                'interval':900}}
     with open(capture_config_file, 'w') as config:
       config.write(json.dumps(capture_config))
 
@@ -85,7 +85,7 @@ def main():
                                      'producer': os.path.basename(__file__),
                                      'datetime': time.strftime(datetime_format, time.gmtime())}
             packet.raw = byte_frame
-            channel.basic_publish(exchange='image_pipeline', routing_key='0', body=packet.output())
+            channel.basic_publish(exchange='image_pipeline', routing_key=device, body=packet.output())
           else:
             failure_count += 1
             #TODO: frequent failure of obtaining images needs to be handled here
