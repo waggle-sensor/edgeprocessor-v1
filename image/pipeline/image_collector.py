@@ -165,6 +165,8 @@ def main():
             else:
                 logger.error('Unable to set streamer for %s:%s ' % (device, message))
                 stream.close()
+        except Exception as ex:
+            logger.error(str(ex))
 
     processor.set_configs(config)
     processor.run()
