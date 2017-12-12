@@ -79,7 +79,8 @@ def main():
           f, frame = cap.read()
           if f:
             rows, cols = frame.shape[:2]
-            rotated_frame = cv2.getRotationMatrix2D((cols/2, rows/2), config['rotate'], 1)
+            rotation_matrix = cv2.getRotationMatrix2D((cols/2, rows/2), config['rotate'], 1)
+            rotated_frame = cv2.warpAffine(frame, rotation_matrix, (rows, cols))
             byte_frame = cv2.imencode('.jpg', rotated_frame)[1].tostring()
 
             logging.info("inserting {} camera image into processing pipeline...".format(device))
@@ -92,7 +93,7 @@ def main():
                                      'datetime': time.strftime(datetime_format, time.gmtime())}
             packet.raw = byte_frame
 
-            channel.basic_publish(exchange='image_pipeline', routing_key=device, body=packet.output())
+            channel.basic_publish(exchange='image_pipeline', routing_key=config['device'], body=packet.output())
           else:
             failure_count += 1
             #TODO: frequent failure of obtaining images needs to be handled here

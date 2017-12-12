@@ -111,7 +111,7 @@ class ImageCollectionProcessor(Processor):
                             f, packet = self.read(device)
                             if f:
                                 packet.meta_data.update({'processing_software': os.path.basename(__file__)})
-                                self.write(packet)
+                                self.write(packet, device)
                                 device_option['last_updated_time'] = current_time
                                 if device_option['verbose']:
                                     logger.info('An image from %s has been published' % (device,))
