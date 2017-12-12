@@ -80,7 +80,7 @@ def main():
           if f:
             rows, cols = frame.shape[:2]
             rotation_matrix = cv2.getRotationMatrix2D((cols/2, rows/2), config['rotate'], 1)
-            rotated_frame = cv2.warpAffine(frame, rotation_matrix, (rows, cols))
+            rotated_frame = cv2.warpAffine(frame, rotation_matrix, (cols, rows))
             byte_frame = cv2.imencode('.jpg', rotated_frame)[1].tostring()
 
             logging.info("inserting {} camera image into processing pipeline...".format(device))
