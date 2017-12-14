@@ -30,7 +30,7 @@ def default_configuration():
         },
         'bottom': {
             'daytime': [('12:00:00', '23:00:00')], # 6 AM to 7 PM in Chicago
-            'interval': 900,                        # every 15 mins
+            'interval': 1800,                        # every 30 mins
             'verbose': False
         }
     }
