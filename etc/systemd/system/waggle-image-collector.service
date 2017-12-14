@@ -1,0 +1,6 @@
+[Unit]
+Description=Image Collector
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/lib/waggle/edge_processor/image/pipeline/image_collector.py
