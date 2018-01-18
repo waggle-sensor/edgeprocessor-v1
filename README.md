@@ -33,6 +33,8 @@ $ ls -l /dev/mali*
 crwxrwxrwx 1 root root 10, 61 Feb 11  2016 /dev/mali0
 ```
 
+# OpenCL for Mali-6xx
+
 To be able to use the GPU in applications or OpenCV OpenCL library needs to be installed. To install OpenCL library
 
 ```bash
