@@ -139,6 +139,7 @@ class RabbitMQStreamer(Streamer):
                 time.sleep(5)
             time.sleep(1)
 
+
 class Processor(object):
     def __init__(self):
         self.processor = None

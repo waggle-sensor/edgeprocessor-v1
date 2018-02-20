@@ -148,7 +148,9 @@ def main():
                 config = json.loads(file.read())
         except Exception as ex:
             logger.error('Cannot load configuration: %s' % (str(ex),))
-            exit(-1)
+            config = default_configuration()
+            with open(config_file, 'w') as file:
+                file.write(json.dumps(config))
     else:
         config = default_configuration()
         with open(config_file, 'w') as file:
