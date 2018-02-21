@@ -38,7 +38,14 @@ logger.addHandler(ch)
 '''
 def get_average_color(image):
     avg_color = np.average(image, axis=0)
-    return np.average(avg_color, axis=0).tolist()
+    avg_color = np.average(avg_color, axis=0)
+
+    ret = {
+        'r': int(avg_color[2]),
+        'g': int(avg_color[1]),
+        'b': int(avg_color[0]),
+    }
+    return ret
 
 def get_histogram(image):
     b,g,r = cv2.split(image)
@@ -166,22 +173,29 @@ class ExampleProcessor(Processor):
         @params: Packet - the packet
         @return: processed packet
     """
-    def do_process(self, message):
-        nparr_img = np.fromstring(message.raw, np.uint8)
+    def do_process(self, packet):
+        nparr_img = np.fromstring(packet.raw, np.uint8)
         img = cv2.imdecode(nparr_img, cv2.IMREAD_COLOR)
 
         # Obtain basic information of the image
-        message.data.append({'avg_color': get_average_color(img)})
-        message.data.append({'histogram': get_histogram(img)})
+        packet.data.append({'avg_color': get_average_color(img)})
+        packet.data.append({'histogram': get_histogram(img)})
         
         # Shrink image size to reduce file size
         (h, w) = img.shape[:2]
-        r = 2.0 / float(w)
-        dim = (2, int(h * r))
+        new_width = int(2)
+        r = new_width / float(w)
+        new_height = int(h * r)
+        dim = (new_width, new_height)
         resized = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
-        message.raw = cv2.imencode('.jpg', resized)[1].tostring()
+        packet.raw = cv2.imencode('.jpg', resized)[1].tostring()
 
-        return message
+        packet.meta_data.update({
+            'image_width': new_width,
+            'image_height': new_height,
+        })
+
+        return packet
 
     """
         Main thread of the processor
