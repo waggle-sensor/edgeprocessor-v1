@@ -6,6 +6,7 @@ import os
 import logging
 import time
 import datetime
+import binascii
 
 # RabbitMQ Python client
 import pika
@@ -44,11 +45,11 @@ def get_histogram(image):
 
     def get_histogram_in_byte(histogram):
         mmax = np.max(histogram) / 255. # Normalize it in range of 255
-        histogram /= mmax
+        histogram = histogram / mmax
         output = bytearray()
         for value in histogram:
             output.append(int(value))
-        return output
+        return binascii.hexlify(output).decode()
     r_histo, bins = np.histogram(r, range(0, 256, 3))
     g_histo, bins = np.histogram(g, range(0, 256, 3))
     b_histo, bins = np.histogram(b, range(0, 256, 3))
@@ -175,8 +176,8 @@ class ExampleProcessor(Processor):
         
         # Shrink image size to reduce file size
         (h, w) = img.shape[:2]
-        r = 75.0 / float(w)
-        dim = (75, int(h * r))
+        r = 2.0 / float(w)
+        dim = (2, int(h * r))
         resized = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
         message.raw = cv2.imencode('.jpg', resized)[1].tostring()
 
