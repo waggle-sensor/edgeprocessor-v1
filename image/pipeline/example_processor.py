@@ -41,10 +41,23 @@ def get_average_color(image):
 
 def get_histogram(image):
     b,g,r = cv2.split(image)
+
+    def get_histogram_in_byte(histogram):
+        mmax = np.max(histogram) / 255. # Normalize it in range of 255
+        histogram /= mmax
+        output = bytearray()
+        for value in histogram:
+            output.append(int(value))
+        return output
     r_histo, bins = np.histogram(r, range(0, 256, 3))
     g_histo, bins = np.histogram(g, range(0, 256, 3))
     b_histo, bins = np.histogram(b, range(0, 256, 3))
-    return {'r': r_histo.tolist(), 'g': g_histo.tolist(), 'b': b_histo.tolist()}
+    ret = {
+        'r': get_histogram_in_byte(r_histo),
+        'g': get_histogram_in_byte(g_histo),
+        'b': get_histogram_in_byte(b_histo),
+    }
+    return ret
 
 '''
     Collection configuration
