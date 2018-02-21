@@ -40,7 +40,7 @@ def get_average_color(image):
     return np.average(avg_color, axis=0).tolist()
 
 def get_histogram(image):
-    b,g,r = cv2.split(img)
+    b,g,r = cv2.split(image)
     r_histo, bins = np.histogram(r, range(0, 256, 3))
     g_histo, bins = np.histogram(g, range(0, 256, 3))
     b_histo, bins = np.histogram(b, range(0, 256, 3))
@@ -51,15 +51,15 @@ def get_histogram(image):
 '''
 def default_configuration():
     conf = {'top': {
-            'daytime': [('12:00:00', '23:00:00')], # 6 AM to 7 PM in Chicago
-            'interval': 10,                       # every 60 mins
+            'daytime': [('00:00:00', '23:59:59')], # 6 AM to 7 PM in Chicago
+            'interval': 600,                       # every 60 mins
             'verbose': False
         },
-        # 'bottom': {
-        #     'daytime': [('12:00:00', '23:00:00')], # 6 AM to 7 PM in Chicago
-        #     'interval': 1800,                        # every 30 mins
-        #     'verbose': False
-        # }
+        'bottom': {
+            'daytime': [('00:00:00', '23:59:59')], # 6 AM to 7 PM in Chicago
+            'interval': 600,                        # every 30 mins
+            'verbose': False
+        }
     }
     return conf
 
