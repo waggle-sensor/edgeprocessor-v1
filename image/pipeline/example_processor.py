@@ -4,6 +4,8 @@ import sys
 import json
 import os
 import logging
+import time
+import datetime
 
 # RabbitMQ Python client
 import pika
@@ -35,14 +37,14 @@ logger.addHandler(ch)
 '''
 def get_average_color(image):
     avg_color = np.average(image, axis=0)
-    return np.average(avg_color, axis=0)
+    return np.average(avg_color, axis=0).tolist()
 
 def get_histogram(image):
-    data = []
-    for i in range(3):
-        his = cv2.calcHist([image], [i], None, [256], [0, 256])
-        data.append(his)
-    return data
+    b,g,r = cv2.split(img)
+    r_histo, bins = np.histogram(r, range(0, 256, 3))
+    g_histo, bins = np.histogram(g, range(0, 256, 3))
+    b_histo, bins = np.histogram(b, range(0, 256, 3))
+    return {'r': r_histo.tolist(), 'g': g_histo.tolist(), 'b': b_histo.tolist()}
 
 '''
     Collection configuration
@@ -156,12 +158,12 @@ class ExampleProcessor(Processor):
 
         # Obtain basic information of the image
         message.data.append({'avg_color': get_average_color(img)})
-        message.data.append({'avg_color': get_histogram(img)})
+        message.data.append({'histogram': get_histogram(img)})
         
         # Shrink image size to reduce file size
         (h, w) = img.shape[:2]
-        r = 320.0 / float(w)
-        dim = (320.0, int(h * r))
+        r = 75.0 / float(w)
+        dim = (75, int(h * r))
         resized = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
         message.raw = cv2.imencode('.jpg', resized)[1].tostring()
 
@@ -171,7 +173,7 @@ class ExampleProcessor(Processor):
         Main thread of the processor
     """
     def run(self):
-        logger.info('Collection has started...')
+        logger.info('Example processor has started...')
         while True:
             try:
                 current_time = time.time()
@@ -220,8 +222,6 @@ if __name__ == '__main__':
             logger.error(str(ex))
 
     processor.set_configs(config)
-    logger.info('Example processor started...')
-    processor.run()   
-
+    processor.run()
     processor.close()
     logger.info('Example processor terminated')
