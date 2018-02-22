@@ -72,13 +72,13 @@ def get_histogram(image):
 '''
 def default_configuration():
     conf = {'top': {
-            'daytime': [('00:00:00', '23:59:59')], # 6 AM to 7 PM in Chicago
-            'interval': 600,                       # every 60 mins
+            'daytime': [('00:00:00', '23:59:59')], # All day long
+            'interval': 300,                       # every 5 mins
             'verbose': False
         },
         'bottom': {
-            'daytime': [('00:00:00', '23:59:59')], # 6 AM to 7 PM in Chicago
-            'interval': 600,                        # every 30 mins
+            'daytime': [('00:00:00', '23:59:59')], # All day long
+            'interval': 300,                        # every 5 mins
             'verbose': False
         }
     }
