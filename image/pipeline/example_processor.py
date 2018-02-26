@@ -57,9 +57,9 @@ def get_histogram(image):
         for value in histogram:
             output.append(int(value))
         return binascii.hexlify(output).decode()
-    r_histo, bins = np.histogram(r, range(0, 256, 3))
-    g_histo, bins = np.histogram(g, range(0, 256, 3))
-    b_histo, bins = np.histogram(b, range(0, 256, 3))
+    r_histo, bins = np.histogram(r, range(0, 256))
+    g_histo, bins = np.histogram(g, range(0, 256))
+    b_histo, bins = np.histogram(b, range(0, 256))
     ret = {
         'r': get_histogram_in_byte(r_histo),
         'g': get_histogram_in_byte(g_histo),
