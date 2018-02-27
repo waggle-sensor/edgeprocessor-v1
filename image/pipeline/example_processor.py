@@ -8,9 +8,6 @@ import time
 import datetime
 import binascii
 
-# RabbitMQ Python client
-import pika
-
 # Import graphics functions
 import cv2
 import numpy as np
