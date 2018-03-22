@@ -5,7 +5,7 @@ The script needs pyaudio to read audio data, and numpy to do further processes a
 pyaudio.paInt16, the number of channel is 1, sampling rate is 44100, each chunk length is 1024, and it records 5 seconds.
 
 When I tested the mic personally in my laptop, ```input_device_index``` was 9. But it must be specifically defined with regard
-to the device index in edge-processor.
+to the device index in edge-processor (the script is tested in ubuntu and mac os).
 
 ```
 import pyaudio
