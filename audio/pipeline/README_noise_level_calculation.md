@@ -102,4 +102,6 @@ sdb = 10*np.log10(b)
 # sdb --> addition of SPL, avgdb --> average of each octave
 ```
 
-### The result values (what need to be return back to DBs) are: avgdb (array) and sdb (single value).
+### Tesult values:
+avgdb (1x10 array) and sdb (single value) are the results of the calculation. Those values need to be return back to DBs 
+using image/audio pipeline.
