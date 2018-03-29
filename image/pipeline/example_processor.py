@@ -1,38 +1,32 @@
 #!/usr/bin/python3
 
 import sys
-import json
 import os
-import logging
 import time
 import datetime
 import binascii
+from queue import Queue
+from threading import Thread, Event
+from collections import deque
+
+import pika
 
 # Import graphics functions
 import cv2
 import numpy as np
 
-# Iport waggle processor
+# Import waggle processor
 # TODO: Embed the python model into pywaggle library
 sys.path.append('/usr/lib/waggle/edge_processor/image')
-from processor import *
+from processor import Processor
 
 # Configuration of the pipeline
 # name of the pipeline
 EXCHANGE = 'image_pipeline'
 # output direction of this processor
-ROUTING_KEY_EXPORT = 'exporter' # flush output to Beehive
+ROUTING_KEY_EXPORT = 'exporter'  # flush output to Beehive
 
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-ch = logging.StreamHandler()
-ch.setFormatter(formatter)
-logger.addHandler(ch)
 
-'''
-    Helper functions
-'''
 def get_average_color(image):
     avg_color = np.average(image, axis=0)
     avg_color = np.average(avg_color, axis=0)
@@ -44,11 +38,12 @@ def get_average_color(image):
     }
     return ret
 
+
 def get_histogram(image):
-    b,g,r = cv2.split(image)
+    b, g, r = cv2.split(image)
 
     def get_histogram_in_byte(histogram):
-        mmax = np.max(histogram) / 255. # Normalize it in range of 255
+        mmax = np.max(histogram) / 255.  # Normalize it in range of 255
         histogram = histogram / mmax
         output = bytearray()
         for value in histogram:
@@ -64,22 +59,103 @@ def get_histogram(image):
     }
     return ret
 
-'''
-    Collection configuration
-'''
+
 def default_configuration():
-    conf = {'top': {
-            'daytime': [('00:00:00', '23:59:59')], # All day long
-            'interval': 300,                       # every 5 mins
-            'verbose': False
+    conf = {
+        'top': {
+            'daytime': [('00:00:00', '23:59:59')],  # All day long
+            'interval': 60,                        # every 5 mins
+            'verbose': True
         },
         'bottom': {
-            'daytime': [('00:00:00', '23:59:59')], # All day long
-            'interval': 300,                        # every 5 mins
-            'verbose': False
+            'daytime': [('00:00:00', '23:59:59')],  # All day long
+            'interval': 60,                        # every 5 mins
+            'verbose': True
         }
     }
     return conf
+
+
+class PipelineWriter(object):
+    def __init__(self, routing_out, exchange='image_pipeline'):
+        self.connection = None
+        self.channel = None
+        self.out_key = routing_out
+        self.exchange = exchange
+
+    def open(self):
+        self.connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        self.channel = self.connection.channel()
+        self.channel.exchange_declare(exchange=self.exchange, exchange_type='direct')
+        return True
+
+    def close(self):
+        if self.connection is not None:
+            if self.connection.is_open:
+                self.connection.close()
+            self.connection = None
+            self.channel = None
+
+    def write(self, frame, headers):
+        properties = pika.BasicProperties(
+            headers=headers,
+            delivery_mode=2,
+            timestamp=int(time.time() * 1000),
+            content_type='b')
+        self.channel.basic_publish(
+            exchange=self.exchange,
+            routing_key=self.out_key,
+            properties=properties,
+            body=frame)
+
+
+class PipelineReader(Thread):
+    def __init__(self, routing_in, exchange='image_pipeline'):
+        Thread.__init__(self)
+        self.is_available = Event()
+        self.last_message = deque(maxlen=1)
+        self.connection = None
+        self.channel = None
+        self.exchange = exchange
+        self.routing_in = routing_in
+
+    def open(self):
+        self.connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        self.channel = self.connection.channel()
+        self.channel.exchange_declare(exchange=self.exchange, exchange_type='direct')
+
+        result = self.channel.queue_declare(exclusive=True, arguments={'x-max-length': 1})
+        self.queue = result.method.queue
+        self.channel.queue_bind(queue=self.queue, exchange=self.exchange, routing_key=self.routing_in)
+        self.start()
+        return True
+
+    def close(self):
+        if self.connection is not None:
+            if self.connection.is_open:
+                self.channel.stop_consuming()
+                self.channel.close()
+                self.connection.close()
+                self.join()
+
+    def read(self):
+        try:
+            return True, self.last_message.pop()
+        except IndexError:
+            return False, ''
+
+    def _rmq_callback(self, channel, method, properties, body):
+        self.last_message.append((properties.headers, body))
+        self.is_available.set()
+
+    def run(self):
+        try:
+            self.channel.basic_consume(self._rmq_callback, queue=self.queue, no_ack=True)
+            self.channel.start_consuming()
+        except Exception:
+            pass
+        print('done)')
+
 
 class ExampleProcessor(Processor):
     def __init__(self):
@@ -98,7 +174,7 @@ class ExampleProcessor(Processor):
                     start_sp = start.split(':')
                     end_sp = end.split(':')
                     durations.append(((int(start_sp[0]), int(start_sp[1]), int(start_sp[2])), (int(end_sp[0]), int(end_sp[1]), int(end_sp[2]))))
-                except:
+                except Exception:
                     durations = [((0, 0, 0), (23, 59, 59))]
                     break
             device_option['daytime'] = durations
@@ -122,7 +198,7 @@ class ExampleProcessor(Processor):
     """
         Read frames from input handlers
         This is non-blocking call
-        @params: String - name of the input stream 
+        @params: String - name of the input stream
         @return: result of operation, a frame from the target stream
     """
     def read(self, from_stream):
@@ -130,18 +206,18 @@ class ExampleProcessor(Processor):
             return False, None
 
         return self.input_handler[from_stream].read()
-    
+
     """
         Write data into output handlers
         @params: Packet - processed packet
                  String - name of the output stream
         @return: result of operation
     """
-    def write(self, packet, to_stream):
+    def write(self, frame, headers, to_stream):
         if to_stream not in self.output_handler:
             return False
 
-        self.output_handler[to_stream].write(packet.output())
+        self.output_handler[to_stream].write(frame, headers)
         return True
 
     """
@@ -167,17 +243,26 @@ class ExampleProcessor(Processor):
 
     """
         Main function of the processor
-        @params: Packet - the packet
-        @return: processed packet
+        @params: frame: binary blob
+                 headers: Dictionary
+
+        @return: (processed frame, processed headers)
     """
-    def do_process(self, packet):
-        nparr_img = np.fromstring(packet.raw, np.uint8)
+    def do_process(self, frame, headers):
+        results = {}
+        nparr_img = np.fromstring(frame, np.uint8)
         img = cv2.imdecode(nparr_img, cv2.IMREAD_COLOR)
 
         # Obtain basic information of the image
-        packet.data.append({'avg_color': get_average_color(img)})
-        packet.data.append({'histogram': get_histogram(img)})
-        
+        results['avg_color'] = get_average_color(img)
+        results['histogram'] = get_histogram(img)
+
+        prev_results = []
+        if 'results' in headers:
+            prev_results = headers['results']
+        prev_results.append({os.path.basename(__file__): results})
+        headers['results'] = prev_results
+
         # Shrink image size to reduce file size
         (h, w) = img.shape[:2]
         new_width = int(2)
@@ -185,20 +270,20 @@ class ExampleProcessor(Processor):
         new_height = int(h * r)
         dim = (new_width, new_height)
         resized = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
-        packet.raw = cv2.imencode('.jpg', resized)[1].tostring()
+        frame = cv2.imencode('.jpg', resized)[1].tostring()
 
-        packet.meta_data.update({
+        headers.update({
             'image_width': new_width,
             'image_height': new_height,
         })
 
-        return packet
+        return headers, frame
 
     """
         Main thread of the processor
     """
     def run(self):
-        logger.info('Example processor has started...')
+        print('Example processor has started...')
         while True:
             try:
                 current_time = time.time()
@@ -212,12 +297,14 @@ class ExampleProcessor(Processor):
                         if result:
                             f, packet = self.read(device)
                             if f:
-                                packet.meta_data.update({'processing_software': os.path.basename(__file__)})
-                                packet = self.do_process(packet)
-                                self.write(packet, device)
+                                headers, frame = packet
+                                headers.update({'processing_software': os.path.basename(__file__)})
+                                headers, frame = self.do_process(frame, headers)
+
+                                self.write(frame, headers, ROUTING_KEY_EXPORT)
                                 device_option['last_updated_time'] = current_time
                                 if device_option['verbose']:
-                                    logger.info('An image from %s has been published' % (device,))
+                                    print('An image from %s has been published' % (device,))
                         else:
                             device_option['last_updated_time'] = current_time + min(wait_time, device_option['interval'])
                     self.config[device] = device_option
@@ -226,8 +313,9 @@ class ExampleProcessor(Processor):
             except KeyboardInterrupt:
                 break
             except Exception as ex:
-                logger.error(str(ex))
+                print(str(ex))
                 break
+
 
 if __name__ == '__main__':
     processor = ExampleProcessor()
@@ -235,18 +323,24 @@ if __name__ == '__main__':
     config = default_configuration()
     for device in config:
         try:
-            stream = RabbitMQStreamer(logger)
-            stream.config(EXCHANGE, device, ROUTING_KEY_EXPORT)
-            result, message = stream.connect()
+            stream_in = PipelineReader(device, EXCHANGE)
+            result = stream_in.open()
             if result:
-                processor.add_handler(stream, handler_name=device, handler_type='in-out')
+                processor.add_handler(stream_in, handler_name=device, handler_type='in')
             else:
-                logger.error('Unable to set streamer for %s:%s ' % (device, message))
-                stream.close()
+                stream_in.close()
+                raise Exception('Unable to set streaming input for %s' % (device))
+            stream_out = PipelineWriter(ROUTING_KEY_EXPORT, EXCHANGE)
+            result = stream_out.open()
+            if result:
+                processor.add_handler(stream_out, handler_name=ROUTING_KEY_EXPORT, handler_type='out')
+            else:
+                stream_out.close()
+                raise Exception('Unable to set streaming output for %s' % (device))
         except Exception as ex:
-            logger.error(str(ex))
+            print(str(ex))
 
     processor.set_configs(config)
     processor.run()
     processor.close()
-    logger.info('Example processor terminated')
+    print('Example processor terminated')
