@@ -45,10 +45,8 @@ In other demo code to detect balloon only, the size of the weight file is 245 MB
 
 The demo code is an implementation of Mask R-CNN on Python 3, Keras, and TensorFlow. The model generates bounding boxes and segmentation masks for each instance of an object in the image. The developer said the code is based on Feature Pyramid Network (FPN) and a ResNet101 backbone, but I've checked that it uses ResNet50. If necessary, we can update it.
 
-The author of the [git repository](https://github.com/matterport/Mask_RCNN) keeps updates the codes with new python libraries, but we are not following updates because we don't like to expand libraries if possible. 
+The author of the [git repository](https://github.com/matterport/Mask_RCNN) keeps updates the codes with new python libraries, but we are not following updates because we don't like to expand libraries if possible.
 
-## Future Works:
-
-The demo in this git is not optimized on the configuration of node, and not revised as plugin to be excuted in edge-processor.
+For now, it takes time about 12-14 seconds to detect objects, and 3-12 seconds to mask objects depends on the number of segmented objects in an image.
 
 
