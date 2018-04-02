@@ -17,7 +17,7 @@ Libraries listed below are necessary to build and compile demo code. Tensorflow 
 
 ### Tensorflow on armv7l:
 
-[Tensorflow supports only 64bit Ubuntu system](https://www.tensorflow.org/install/install_linux). Also to install it on armv7l, it needs to use bazel to build source codes directly. Moreover, [Tensorflow support GPU when the OS is Ubuntu and using Cuda Toolkit 9.0 / cuDNN v7](https://www.tensorflow.org/install/install_linux).
+Tensorflow does not support binaries for armv7l officially -- [Tensorflow binaries support 64bit Ubuntu / Windows / Mac system](https://www.tensorflow.org/install/install_linux). Also to install it on armv7l, it needs to use bazel to build source codes directly. Moreover, [Tensorflow support GPU when the OS is Ubuntu and using Cuda Toolkit 9.0 / cuDNN v7](https://www.tensorflow.org/install/install_linux).
 
 In other case, [opencv dnn can use tensorflow](https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API) in network.
 
