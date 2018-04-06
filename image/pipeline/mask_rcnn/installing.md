@@ -18,12 +18,15 @@ wget --no-check-certificate https://github.com/bazelbuild/bazel/releases/downloa
 unzip bazel-0.10.0-dist.zip -d bazel-0.10.0-dist
 nano scripts/bootstrap/compile.sh
 ```
-
-find line 117:
+In ```nano scripts/bootstrap/compile.sh``` find line 117:
 ```
 "run "${JAVAC}" -classpath "${classpath}" -sourcepath "${sourcepath}""
 ```
 and add -J-Xms256m -J-Xmx384M as:
 ```
 " run "${JAVAC}" -J-Xms256m -J-Xmx384m -classpath "${classpath}" -sourcepath "${sourcepath}""
+```
+And then,
+```
+./complie.sh
 ```
