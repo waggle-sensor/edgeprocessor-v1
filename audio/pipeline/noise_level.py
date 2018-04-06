@@ -6,12 +6,14 @@ import json
 import subprocess
 import argparse
 
+import pika
 import pyaudio
 import numpy as np
 
 # TODO: There should be a better way to find Waggle microphone
 WAGGLE_MICROPHONE_NAME = 'USB PnP Sound Device:'
 my_name = os.path.basename(__file__)
+
 
 def get_default_configuration():
     default_config = {
@@ -61,7 +63,6 @@ class PipelineWriter(object):
             body=frame)
 
 
-
 class AudioNoiseCalculator(object):
     def __init__(self, hrf=False, node_id='NO_ID'):
         self.hrf = hrf
@@ -88,7 +89,7 @@ class AudioNoiseCalculator(object):
 
         return config_data
 
-    def _read_callback(self, in_data,frame_count, time_info, status):
+    def _read_callback(self, in_data, frame_count, time_info, status):
         self.frames.append(np.frombuffer(in_data, dtype=np.int16))
         # print(frame_count, time_info, status)
         self.frame_count += 1
@@ -150,7 +151,7 @@ class AudioNoiseCalculator(object):
 
         if self.sender.is_connected:
             self.sender.write(message, headers)
-        elif self.sender.
+        # elif self.sender.
 
     def close(self):
         if self.stream is not None:
@@ -168,17 +169,17 @@ class AudioNoiseCalculator(object):
         number_of_samples = numpydata.shape[0]
         time_per_sample = 1.0 / self.audio_rate
 
-        yf = np.fft.fftn(numpydata) # the n-dimensional FFT
-        xf = np.linspace(0.0, 1.0/(2.0*time_per_sample), number_of_samples//2) # 1.0/(2.0*T) = RATE / 2
+        yf = np.fft.fftn(numpydata)  # the n-dimensional FFT
+        xf = np.linspace(0.0, 1.0 / (2.0 * time_per_sample), number_of_samples // 2)  # 1.0/(2.0*T) = RATE / 2
 
         octave = {}
         avg = []
-        medium = [31, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000] # Medium? of octave, hearable frequency
+        medium = [31, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]  # Medium? of octave, hearable frequency
 
         for i in range(10):
             octave[i] = [medium[i]]
 
-        val = yf[0:number_of_samples//2]
+        val = yf[0:number_of_samples // 2]
 
         for idx in range(len(xf)):
             if xf[idx] < 20:
@@ -205,18 +206,18 @@ class AudioNoiseCalculator(object):
                 octave[9].append(val[idx])
 
         for di in range(len(octave)):
-            avg.append(sum(octave[di])/len(octave[di]))
+            avg.append(sum(octave[di]) / len(octave[di]))
         # print(octave)
         avg = np.asarray(avg)
-        avgdb = 10*np.log10(np.abs(avg))
+        avgdb = 10 * np.log10(np.abs(avg))
 
         a = []
         b = 0,
         for ia in range(len(avg)):
-            a.append(((10**(avgdb[ia]/10))**(1/2)) * 0.00002)
-            b = b + (a[ia]/0.00002)**2
+            a.append(((10 ** (avgdb[ia] / 10)) ** (1 / 2)) * 0.00002)
+            b = b + (a[ia] / 0.00002) ** 2
 
-        sdb = 10*np.log10(b)
+        sdb = 10 * np.log10(b)
         # sdb --> addtion of SPL, avgdb --> average of each octave
 
         print('Noise level: %0.6f' % (sdb,))
@@ -238,7 +239,7 @@ if __name__ == '__main__':
 
     command = ['arp -a 10.31.81.10 | awk \'{print $4}\' | sed \'s/://g\'']
     node_id = str(subprocess.getoutput(command))
-    if len(node_id) < 1 and args.hrf == False:
+    if len(node_id) < 1 and args.hrf is False:
         print('No NODE_ID is found. Use --hrf to run without NODE_ID. Abort...')
         exit(1)
 
