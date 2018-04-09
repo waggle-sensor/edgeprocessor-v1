@@ -38,7 +38,7 @@ avg = []
 medium = [31, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000] # Medium? of octave, hearable frequency
 
 for i in range(10):
-    octave[i] = [medium[i]]
+    octave[i] = []
 
 val = yf[0:N//2]
 
@@ -73,8 +73,8 @@ avgdb = 10*np.log10(np.abs(avg))
 a = []
 b = 0,
 for ia in range(len(avg)):
-    a.append(((10**(avgdb[ia]/10))**(1/2)) * 0.00002)
-    b = b + (a[ia]/0.00002)**2
+    a.append(10**(avgdb[ia]/10))
+    b = b + a[ia]
 
 sdb = 10*np.log10(b)
 
