@@ -32,7 +32,7 @@ and then we use the generated bounding boxes, mask polygons, and labels to the o
 ```
 # Root directory of the project
 ROOT_DIR = os.getcwd()
-IMAGE_DIR =  os.path.join(ROOT_DIR, "image")
+IMAGE_DIR =  os.path.join(ROOT_DIR, "images")
 ```
 
 ## Apply demo using the provided weights
