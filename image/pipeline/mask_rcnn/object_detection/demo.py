@@ -87,8 +87,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     scores: (optional) confidence scores for each box
     figsize: (optional) the size of the image.
     """
-    display_start = time.time()
-
+    
     # Number of instances
     N = boxes.shape[0]
     if not N:
@@ -130,7 +129,6 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         # Mask Polygon --> took 0.03 - 0.05 seconds for each mask polygon,
         # but total display time took 2.30 seconds with bounding boxes, labels and mask polygons
         # Pad to ensure proper polygons for masks that touch image edges.
-        start = time.time()
         mask = masks[:, :, i]
         padded_mask = np.zeros(
             (mask.shape[0] + 2, mask.shape[1] + 2), dtype=np.uint8)
@@ -141,14 +139,9 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             verts = np.fliplr(verts) - 1
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
-        end = time.time()
-        print("Elapsed %.2f" % (end - start))
-
+            
     ax.imshow(masked_image.astype(np.uint8))
     plt.savefig('splash_vis_{:%Y%m%dT%H%M%S}.png'.format(datetime.datetime.now()))
-
-    display_end = time.time()
-    print("Total Display Elapsed %.2f" % (display_end - display_start))
 
 def random_colors(N, bright=True):
     """
@@ -164,7 +157,6 @@ def random_colors(N, bright=True):
 
 def detect_and_color_splash(model, image_path=None):
     assert image_path or video_path
-    detect_and_display_start = time.time()
 
     # Run model detection and generate the color splash effect
     # Read image --> takes ~ 0.02 second for splash
@@ -176,17 +168,12 @@ def detect_and_color_splash(model, image_path=None):
     for i in range(len(r['rois'])):
         print(class_names[r['class_ids'][i]], r['scores'][i])
 
-    detect_and_display_end = time.time()
-    print("Detect and Display Elapsed %.2f" % (detect_and_display_end - detect_and_display_start))
-
 ############################################################
 #  Evaluation
 ############################################################
 
 if __name__ == '__main__':
     import argparse
-
-    main_start = time.time()
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(
@@ -199,10 +186,8 @@ if __name__ == '__main__':
                         metavar="path or URL to image",
                         help='Image to apply the color splash effect on')
     args = parser.parse_args()
-    print(args)
 
     config = InferenceConfig()
-    config.display()
 
     # Create model --> takes > 2 second for splash
     model = modellib.MaskRCNN(mode="inference", config=config, model_dir=args.logs)
@@ -220,5 +205,3 @@ if __name__ == '__main__':
     except Exception as ex:
         pass
 
-    main_end = time.time()
-    print("Total Elapsed %.2f" % (main_end - main_start))
