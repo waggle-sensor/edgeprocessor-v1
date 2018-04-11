@@ -26,13 +26,20 @@ This is an example showing the use of Mask RCNN in a real application.
 We train the model to 50 objects, which are listed in a class in the demo.py,
 and then we use the generated bounding boxes, mask polygons, and labels to the objects.
 
-To run this code, You MUST download pre-trained COCO weights (mask_rcnn_coco.h5) from the [releases page](https://github.com/matterport/Mask_RCNN/releases).
+## Prerequites for This Example:
+1. To run this code, You MUST download pre-trained COCO weights (mask_rcnn_coco.h5) from the [releases page](https://github.com/matterport/Mask_RCNN/releases).
+2. Before run this code, You MUST designate root directory of the project in the code ```demo.py```.
+```
+# Root directory of the project
+ROOT_DIR = os.getcwd()
+IMAGE_DIR =  os.path.join(ROOT_DIR, "image")
+```
 
 ## Apply demo using the provided weights
 Apply splash effect on an image:
 
 ```bash
-python3 demo.py --image=<file name or URL>
+python3 demo.py --image=<file path or URL>
 ```
 
 The code in `demo.py` is set to train for 50K steps (50 epochs of 1000 steps each), and using a batch size of 2.
