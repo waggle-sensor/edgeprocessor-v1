@@ -21,7 +21,7 @@ import numpy as np
 
 # Root directory of the project
 ROOT_DIR = os.getcwd()
-IMAGE_DIR =  os.path.join(ROOT_DIR, "balloon/train")
+IMAGE_DIR =  os.path.join(ROOT_DIR, "images")
 
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)
