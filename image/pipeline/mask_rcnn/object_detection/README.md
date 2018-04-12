@@ -16,7 +16,6 @@ The repository includes:
 * Python 3.4+
 * TensorFlow 1.3+
 * Keras 2.0.8+
-* Jupyter Notebook
 * Numpy, skimage, scipy, Pillow, cython, h5py
 
 
