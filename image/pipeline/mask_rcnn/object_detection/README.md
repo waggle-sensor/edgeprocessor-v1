@@ -41,5 +41,5 @@ Apply splash effect on an image:
 python3 demo.py --image=<file path or URL>
 ```
 
-The code in `demo.py` is set to train for 50K steps (50 epochs of 1000 steps each), and using a batch size of 2.
+The code in `demo.py` is set to train for 50K steps (50 epochs of 1000 steps each), and using a batch size of 1.
 Update the schedule to fit your needs.
