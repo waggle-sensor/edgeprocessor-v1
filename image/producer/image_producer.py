@@ -1,6 +1,5 @@
 #! /usr/bin/python3
 
-import sys
 import os
 import subprocess
 import time
@@ -14,11 +13,7 @@ import signal
 import glob
 import json
 
-# sys.path.append('/usr/lib/waggle/edge_processor/image')
-# from processor import Packet, Processor
-
 graceful_signal_to_kill = False
-datetime_format = '%Y-%m-%d %H:%M:%S'
 producer_name = os.path.basename(__file__)
 
 
@@ -26,15 +21,11 @@ def get_default_configuration():
     default_configuration = {
         'top': {
             'resolution': '3264x2448',
-            'skip_frames': 20,
             'rotate': 0,
-            'interval': 10
         },
         'bottom': {
             'resolution': '2592x1944',
-            'skip_frames': 20,
             'rotate': 180,
-            'interval': 10
         }
     }
     return default_configuration
@@ -60,7 +51,7 @@ def send_to_rmq(channel, frame, timestamp, config):
         'image_rotate': config['rotate'],
         'device': config['device'],
         'producer': producer_name,
-        'datetime': time.strftime(datetime_format, time.gmtime(timestamp))
+        'timestamp': timestamp
     }
     properties = pika.BasicProperties(
         headers=headers,
@@ -177,6 +168,7 @@ def main():
         cap, event, config = cam_capture[device]
         print('%s is starting...' % (device,))
         cap.start()
+        time.sleep(1)
 
     try:
         while not graceful_signal_to_kill:
@@ -189,7 +181,6 @@ def main():
                     f, frame_raw = cap.get()
                     if f:
                         send_to_rmq(rmq_channel, frame_raw, time.time(), config)
-                        # print(time.time(), device)
                     event.clear()
     except KeyboardInterrupt:
         pass

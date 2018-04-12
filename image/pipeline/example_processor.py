@@ -23,6 +23,7 @@ from processor import Processor
 # Configuration of the pipeline
 # name of the pipeline
 EXCHANGE = 'image_pipeline'
+
 # output direction of this processor
 ROUTING_KEY_EXPORT = 'exporter'  # flush output to Beehive
 
