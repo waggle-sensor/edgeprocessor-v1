@@ -23,6 +23,9 @@ import numpy as np
 ROOT_DIR = os.getcwd()
 IMAGE_DIR =  os.path.join(ROOT_DIR, "images")
 
+# Dictionary for detection results
+detected_objects = {}
+
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)
 import utils
@@ -87,7 +90,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     scores: (optional) confidence scores for each box
     figsize: (optional) the size of the image.
     """
-    
+
     # Number of instances
     N = boxes.shape[0]
     if not N:
@@ -120,7 +123,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         # Label --> took 0.00 seconds for each label, but total display time took 0.96 seconds with bounding boxes and labels
         class_id = class_ids[i]
         score = scores[i] if scores is not None else None
-        label = class_names[class_id]
+        label = str(i) + ": " + class_names[class_id]
         x = random.randint(x1, (x1 + x2) // 2)
         caption = "{} {:.3f}".format(label, score) if score else label
         ax.text(x1, y1 + 8, caption,
@@ -139,7 +142,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             verts = np.fliplr(verts) - 1
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
-            
+
     ax.imshow(masked_image.astype(np.uint8))
     plt.savefig('splash_vis_{:%Y%m%dT%H%M%S}.png'.format(datetime.datetime.now()))
 
@@ -166,7 +169,8 @@ def detect_and_color_splash(model, image_path=None):
     display_instances(image, r['rois'], r['masks'], r['class_ids'],
                             class_names, r['scores'])
     for i in range(len(r['rois'])):
-        print(class_names[r['class_ids'][i]], r['scores'][i])
+        detected_objects[i] = (class_names[r['class_ids'][i]], r['scores'][i])
+        # print(class_names[r['class_ids'][i]], r['scores'][i])
 
 ############################################################
 #  Evaluation
@@ -202,6 +206,6 @@ if __name__ == '__main__':
     # Evaluate --> takes > 12 second for splash
     try:
         detect_and_color_splash(model, image_path=args.image)
+        print(detected_objects)
     except Exception as ex:
         pass
-
