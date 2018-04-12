@@ -16,6 +16,9 @@ sudo apt-get install oracle-java8-installer -y
 apt-get install unzip
 wget --no-check-certificate https://github.com/bazelbuild/bazel/releases/download/0.10.0/bazel-0.10.0-dist.zip
 unzip bazel-0.10.0-dist.zip -d bazel-0.10.0-dist
+ulimit -c unlimited
+mkdir /tmp/bazel_tmp
+export TMPDIR=/tmp/bazel_tmp
 nano scripts/bootstrap/compile.sh
 ```
 In ```nano scripts/bootstrap/compile.sh``` find line 117:
