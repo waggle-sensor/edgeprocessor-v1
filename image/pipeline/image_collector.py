@@ -99,24 +99,16 @@ class ImageCollectionWorker(Thread):
         )
         self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
-        result = self.channel.queue_declare(exclusive=True, arguments={'x-max-length': 1})
-        self.channel.queue_bind(queue=result.method.queue, exchange=EXCHANGE, routing_key=self.routing_key)
-        self.channel.basic_consume(self._callback_read, result.method.queue)
+        self.queue = self.channel.queue_declare(exclusive=True, arguments={'x-max-length': 1}).method.queue
+        self.channel.queue_bind(queue=self.queue, exchange=EXCHANGE, routing_key=self.routing_key)
 
     def read(self, timeout=30):
         for i in range(timeout):
-            method_frame, properties, body = self.channel.consume(self.routing_key)
-            print(properties)
-            self.channel.basic_ack(method_frame.delivery_tag)
-            time.sleep(1)
-        self.channel.cancel()
+            method, properties, body = self.channel.basic_get(queue=self.queue, no_ack=True)
+            if method is not None:
+                return True, (properties, body)
+            time.sleep(0.1)
         return False, ''
-        # try:
-        #     self.channel.start_consuming()
-        # except Exception as ex:
-        #     self.channel.stop_consuming()
-        #     return False, str(ex)
-        # return True, ''
         
     def write(self, frame, headers):
         properties = pika.BasicProperties(
@@ -168,13 +160,14 @@ class ImageCollectionWorker(Thread):
                     if result:
                         f, msg = self.read()
                         if f:
-                            self.frame_headers.update({'processing_software': os.path.basename(__file__)})
-                            self.write(packet, device)
+                            properties, frame = msg
+                            print(properties)
+                            properties.headers.update({'processing_software': os.path.basename(__file__)})
+                            self.write(frame, properties.headers)
                             last_updated = current_time
-                            print('An image from %s has been published' % (device,))
+                            print('An image from %s has been published' % (self.device_name,))
                     else:
                         last_updated = current_time + min(wait_time, self.interval)
-
                 time.sleep(1)
             except (KeyboardInterrupt, Exception) as ex:
                 print(str(ex))
@@ -216,7 +209,11 @@ def main():
 
     try:
         while not graceful_signal_to_kill:
-            time.sleep(0.1)
+            for worker in workers:
+                if not worker.is_alive():
+                    print('Worker %s is not alive. Restarting...' % (worker.device_name,))
+                    graceful_signal_to_kill = True
+            time.sleep(1)
     except (KeyboardInterrupt, Exception):
         pass
     finally:

@@ -36,6 +36,8 @@ def generate_meta_data(meta_data, results):
         oth[piexif.ImageIFD.Software] = meta_data['producer']
     if 'timestamp' in meta_data:
         timestamp = meta_data['timestamp']
+        if isinstance(timestamp, str):
+            timestamp = float(timestamp)
         oth[piexif.ImageIFD.DateTime] = time.strftime(datetime_format, time.gmtime(timestamp))
     if 'processing_software' in meta_data:
         oth[piexif.ImageIFD.ProcessingSoftware] = meta_data['processing_software']
