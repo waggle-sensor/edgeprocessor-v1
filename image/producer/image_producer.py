@@ -51,7 +51,7 @@ def send_to_rmq(channel, frame, timestamp, config):
         'image_rotate': config['rotate'],
         'device': config['device'],
         'producer': producer_name,
-        'timestamp': timestamp
+        'timestamp': str(timestamp)
     }
     properties = pika.BasicProperties(
         headers=headers,
