@@ -90,6 +90,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     scores: (optional) confidence scores for each box
     figsize: (optional) the size of the image.
     """
+    display_start = time.time()
 
     # Number of instances
     N = boxes.shape[0]
@@ -146,6 +147,10 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     ax.imshow(masked_image.astype(np.uint8))
     plt.savefig('splash_vis_{:%Y%m%dT%H%M%S}.png'.format(datetime.datetime.now()))
 
+    display_end = time.time()
+    print("Display Elapsed %.2f" % (display_end - display_end))
+
+
 def random_colors(N, bright=True):
     """
     Generate random colors.
@@ -165,7 +170,11 @@ def detect_and_color_splash(model, image_path=None):
     # Read image --> takes ~ 0.02 second for splash
     image = skimage.io.imread(args.image)
     # Detect objects
+    detect_start = time.time()
     r = model.detect([image], verbose=0)[0]
+    detect_end = time.time()
+    print("Detect Elapsed %.2f" % (detect_end - detect_start))
+    # Display objects
     display_instances(image, r['rois'], r['masks'], r['class_ids'],
                             class_names, r['scores'])
     for i in range(len(r['rois'])):
@@ -178,6 +187,8 @@ def detect_and_color_splash(model, image_path=None):
 
 if __name__ == '__main__':
     import argparse
+
+    main_start = time.time()
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(
@@ -209,3 +220,6 @@ if __name__ == '__main__':
         print(detected_objects)
     except Exception as ex:
         pass
+
+    main_end = time.time()
+    print("Evaluation Elapsed %.2f" % (main_end - main_start))
