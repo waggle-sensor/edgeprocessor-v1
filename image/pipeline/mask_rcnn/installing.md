@@ -8,17 +8,18 @@ Will install Java for bazel. It takes about 50MB.
 sudo add-apt-repository ppa:webupd8team/java
 sudo apt-get update
 sudo apt-get install oracle-java8-installer -y
+sudo apt-get install oracle-java8-unlimited-jce-policy
 ```
 
 ## Install Bazel
 
 ```
-apt-get install unzip
+apt-get install unzip zip
 wget --no-check-certificate https://github.com/bazelbuild/bazel/releases/download/0.10.0/bazel-0.10.0-dist.zip
 unzip bazel-0.10.0-dist.zip -d bazel-0.10.0-dist
 ulimit -c unlimited
-mkdir /tmp/bazel_tmp
-export TMPDIR=/tmp/bazel_tmp
+# mkdir /tmp/bazel_tmp
+# export TMPDIR=/tmp/bazel_tmp
 nano scripts/bootstrap/compile.sh
 ```
 In ```nano scripts/bootstrap/compile.sh``` find line 117:
