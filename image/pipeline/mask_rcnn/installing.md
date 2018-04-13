@@ -134,5 +134,8 @@ Preconfigured Bazel build configs. You can use any of the below by adding "--con
 	--config=monolithic  	# Config for mostly static monolithic build.
 Configuration finished
 ```
-
+And then,
+```
+bazel build -c opt --copt="-mfpu=neon-vfpv4" --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 1024,1.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
+```
 
