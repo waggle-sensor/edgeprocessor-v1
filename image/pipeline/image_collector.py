@@ -8,23 +8,22 @@ import datetime
 from threading import Thread
 
 import pika
-import cv2
-import numpy as np
 
 graceful_signal_to_kill = False
 
 EXCHANGE = 'image_pipeline'
 ROUTING_KEY_EXPORT = 'exporter'
 
+
 def get_default_configuration():
     conf = {
         'top': {
-            'daytime': [('12:00:00', '23:00:00')], # 6 AM to 7 PM in Chicago
+            'daytime': [('12:00:00', '23:00:00')],  # 6 AM to 7 PM in Chicago
             'interval': 3600,                       # every 60 mins
         },
         'bottom': {
-            'daytime': [('12:00:00', '23:00:00')], # 6 AM to 7 PM in Chicago
-            'interval': 1800,                        # every 30 mins
+            'daytime': [('12:00:00', '23:00:00')],  # 6 AM to 7 PM in Chicago
+            'interval': 1800,                       # every 30 mins
         }
     }
     return conf
@@ -109,7 +108,7 @@ class ImageCollectionWorker(Thread):
                 return True, (properties, body)
             time.sleep(0.1)
         return False, ''
-        
+
     def write(self, frame, headers):
         properties = pika.BasicProperties(
             headers=headers,
@@ -118,7 +117,7 @@ class ImageCollectionWorker(Thread):
             content_type='b',
         )
         try:
-            channel.basic_publish(
+            self.channel.basic_publish(
                 properties=properties,
                 exchange=EXCHANGE,
                 routing_key=ROUTING_KEY_EXPORT,
@@ -146,7 +145,7 @@ class ImageCollectionWorker(Thread):
         try:
             self.open()
         except Exception as ex:
-            prnit('Could not open connection to pipeline: %s' % (str(ex),))
+            print('Could not open connection to pipeline: %s' % (str(ex),))
             return
 
         last_updated = time.time() - (self.interval + 10)
@@ -161,11 +160,13 @@ class ImageCollectionWorker(Thread):
                         f, msg = self.read()
                         if f:
                             properties, frame = msg
-                            print(properties)
                             properties.headers.update({'processing_software': os.path.basename(__file__)})
-                            self.write(frame, properties.headers)
-                            last_updated = current_time
-                            print('An image from %s has been published' % (self.device_name,))
+                            _f, _msg = self.write(frame, properties.headers)
+                            if _f:
+                                last_updated = current_time
+                                print('An image from %s has been published' % (self.device_name,))
+                            else:
+                                print('Failed to publish for %s; %s' % (self.device_name, _msg))
                     else:
                         last_updated = current_time + min(wait_time, self.interval)
                 time.sleep(1)

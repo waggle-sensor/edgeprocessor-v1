@@ -17,8 +17,12 @@ null_exif = {
     '1st': {},
     'thumbnail': None
 }
+
 copy_right = 'Waggle (http://wa8.gl) and Array of Things (https://arrayofthings.github.io). Do not use without explicit permission'
 datetime_format = '%Y-%m-%d %H:%M:%S'
+
+EXCHANGE = 'image_pipeline'
+ROUTING_KEY_EXPORT = 'exporter'
 
 
 def generate_meta_data(meta_data, results):
@@ -45,7 +49,7 @@ def generate_meta_data(meta_data, results):
     exif_dict['0th'] = oth
 
     exif = exif_dict['Exif']
-    if results is not []:
+    if results != []:
         exif[piexif.ExifIFD.UserComment] = json.dumps({'results': results}).encode()
     exif_dict['Exif'] = exif
 
@@ -54,9 +58,10 @@ def generate_meta_data(meta_data, results):
 
 def convert_image_to_jpg(image, pixelformat='MJPG'):
     jpeg_binary = None
-    if 'MJPG' in format:
+    if 'MJPG' in pixelformat:
         nparr = np.fromstring(image, np.uint8)
-        jpeg_binary = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        np_image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        jpeg_binary = cv2.imencode('.jpg', np_image)[1].tostring()
     else:
         raise Exception('Unsupported image format %s' % (pixelformat,))
     return jpeg_binary
@@ -68,14 +73,14 @@ def make_image_bytes(meta_data, additional_info, image):
         exif = generate_meta_data(meta_data, additional_info)
         image_format = meta_data['image_format'].upper()
         if image_format != 'JPEG' or image_format != 'JPG':
-            image = convert_image_to_jpg(image)
+            image = convert_image_to_jpg(image, image_format)
         exif_bytes = piexif.dump(exif)
         piexif.insert(exif_bytes, image, ret)
         return ret.read()
     except Exception as ex:
         if 'processing_software' in meta_data:
             software = meta_data['processing_software']
-            print('Could not process image by %s: %s' % (software, str(ex)))
+            print('Could not process the image from %s: %s' % (software, str(ex)))
         else:
             print('Could not process image: %s' % (str(ex),))
     return None
@@ -86,33 +91,34 @@ def process_image(channel, method, properties, body):
         headers = properties.headers
         if 'results' in headers:
             processed_data = headers['results']
+        else:
+            processed_data = []
         jpeg_binary = make_image_bytes(headers, processed_data, body)
-
-        print("pushing image to export queue...")
-        properties = pika.BasicProperties(
-            headers=headers,
-            delivery_mode=2,
-            timestamp=int(time.time() * 1000),
-            content_type='b',
-            type='jpeg',
-            app_id='image_exporter:0:0',
-        )
-        channel.basic_publish(
-            exchange='',
-            routing_key='images',
-            body=jpeg_binary,
-            properties=properties
-        )
+        if jpeg_binary is not None:
+            properties = pika.BasicProperties(
+                headers=headers,
+                delivery_mode=2,
+                timestamp=int(time.time() * 1000),
+                content_type='b',
+                type='jpeg',
+                app_id='image_exporter:0:0',
+            )
+            channel.basic_publish(
+                exchange='',
+                routing_key='images',
+                body=jpeg_binary,
+                properties=properties
+            )
+            print("pushing image to export queue...")
     else:
         print("The message does not have header to parse...")
 
 
 def main():
-    EXPORT_STAGE = 'exporter'
 
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
-    channel.exchange_declare(exchange='image_pipeline', exchange_type='direct')
+    channel.exchange_declare(exchange=EXCHANGE, exchange_type='direct')
     queue = channel.queue_declare(exclusive=True)
 
     # Binding consistently fails on a clean RMQ broker unless
@@ -120,10 +126,10 @@ def main():
     time.sleep(1)
 
     channel.queue_bind(
-        exchange='image_pipeline',
+        exchange=EXCHANGE,
         queue=queue.method.queue,
-        routing_key=EXPORT_STAGE)
-    channel.queue_declare(queue='images', exclusive=True, arguments={'x-max-length': 32})
+        routing_key=ROUTING_KEY_EXPORT)
+    channel.queue_declare(queue='images', arguments={'x-max-length': 32})
 
     channel.basic_consume(process_image, queue=queue.method.queue, no_ack=True)
     try:
@@ -132,8 +138,8 @@ def main():
         print(str(ex))
         channel.stop_consuming()
     finally:
-        channel.close()
-        connection.close()
+    channel.close()
+    connection.close()
 
 
 if __name__ == '__main__':
