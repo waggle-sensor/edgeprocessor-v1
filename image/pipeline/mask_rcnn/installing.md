@@ -74,7 +74,7 @@ And then,
 ```
 ./configure
 ```
-Configure the build:
+**Configure the build:**
 ```
 Extracting Bazel installation...
 You have bazel 0.11.1- (@non-git) installed.
@@ -139,4 +139,5 @@ And then,
 ```
 bazel build -c opt --copt="-mfpu=neon-vfpv4" --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 1024,4.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
 ```
+
 
