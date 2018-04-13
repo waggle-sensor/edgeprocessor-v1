@@ -33,6 +33,7 @@ and add -J-Xms256m -J-Xmx384M as:
 And then,
 ```
 ./complie.sh
+ sudo cp /root/bazel11/output/bazel /usr/local/bin/bazel
 ```
 
 ## Install Tensorflow:
