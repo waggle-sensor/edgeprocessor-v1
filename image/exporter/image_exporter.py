@@ -138,8 +138,8 @@ def main():
         print(str(ex))
         channel.stop_consuming()
     finally:
-    channel.close()
-    connection.close()
+        channel.close()
+        connection.close()
 
 
 if __name__ == '__main__':
