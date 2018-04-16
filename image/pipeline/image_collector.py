@@ -1,89 +1,138 @@
 #!/usr/bin/env python3
 
 import os
-import pika
 import json
-import cv2
-import numpy as np
+import signal
 import time
 import datetime
-import argparse
-import sys
-import logging
-sys.path.append('/usr/lib/waggle/edge_processor/image')
-from processor import *
+from threading import Thread
 
-datetime_format = '%a %b %d %H:%M:%S %Z %Y'
+import pika
 
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-ch = logging.StreamHandler()
-ch.setFormatter(formatter)
-logger.addHandler(ch)
+graceful_signal_to_kill = False
 
-def default_configuration():
-    conf = {'top': {
-            'daytime': [('12:00:00', '23:00:00')], # 6 AM to 7 PM in Chicago
+EXCHANGE = 'image_pipeline'
+ROUTING_KEY_EXPORT = 'exporter'
+
+
+def get_default_configuration():
+    conf = {
+        'top': {
+            'daytime': [('12:00:00', '23:00:00')],  # 6 AM to 7 PM in Chicago
             'interval': 3600,                       # every 60 mins
-            'verbose': False
         },
         'bottom': {
-            'daytime': [('12:00:00', '23:00:00')], # 6 AM to 7 PM in Chicago
-            'interval': 1800,                        # every 30 mins
-            'verbose': False
+            'daytime': [('12:00:00', '23:00:00')],  # 6 AM to 7 PM in Chicago
+            'interval': 1800,                       # every 30 mins
         }
     }
     return conf
 
 
-class ImageCollectionProcessor(Processor):
-    def __init__(self):
-        super().__init__()
+def get_config():
+    config_file = '/wagglerw/waggle/image_collector.conf'
+    config = None
+    try:
+        with open(config_file) as config_file:
+            config = json.loads(config_file.read())
+    except Exception:
+        config = get_default_configuration()
+        with open(config_file, 'w') as config_file:
+            config_file.write(json.dumps(config, sort_keys=True, indent=4))
 
-    def set_configs(self, configs):
-        for device in configs:
-            device_option = configs[device]
-            durations = []
-            for start, end in device_option['daytime']:
-                try:
-                    start_sp = start.split(':')
-                    end_sp = end.split(':')
-                    durations.append(((int(start_sp[0]), int(start_sp[1]), int(start_sp[2])), (int(end_sp[0]), int(end_sp[1]), int(end_sp[2]))))
-                except:
-                    durations = [((0, 0, 0), (23, 59, 59))]
-                    break
-            device_option['daytime'] = durations
-            configs[device] = device_option
-        self.config = configs
+    return config
+
+
+def get_daytime_durations(config_daytime):
+    result = []
+    try:
+        for daytime_start, daytime_end in config_daytime:
+            start_sp = daytime_start.strip().split(':')
+            end_sp = daytime_end.strip().split(':')
+            daytime_start = datetime.time(
+                hour=int(start_sp[0]),
+                minute=int(start_sp[1]),
+                second=int(start_sp[2]))
+            daytime_end = datetime.time(
+                hour=int(end_sp[0]),
+                minute=int(end_sp[1]),
+                second=int(end_sp[2]))
+            result.append((daytime_start, daytime_end))
+    except Exception as ex:
+        result = None
+    return result
+
+
+class ImageCollectionWorker(Thread):
+    def __init__(self, device, daytime, interval):
+        Thread.__init__(self)
+        self.device_name = device
+        self.routing_key = device
+        self.stop_signal = False
+        self.daytime = daytime
+        self.interval = interval
+        self.connection = None
+        self.channel = None
+        self.frame = None
+        self.frame_headers = None
+
+    def _close_connection(self):
+        if self.connection is not None:
+            if self.connection.is_open:
+                self.connection.close()
+
+    def _callback_read(self, ch, method, properties, body):
+        self.frame = body
+        self.frame_headers = properties.headers
+        ch.stop_consuming()
 
     def close(self):
-        for in_handler in self.input_handler:
-            self.input_handler[in_handler].close()
-        for out_handler in self.output_handler:
-            self.output_handler[out_handler].close()
+        self.stop_signal = True
 
-    def read(self, from_stream):
-        if from_stream not in self.input_handler:
-            return False, None
+    def open(self):
+        parameters = pika.ConnectionParameters(
+            host='localhost',
+            connection_attempts=3,
+            retry_delay=5,
+            socket_timeout=2
+        )
+        self.connection = pika.BlockingConnection(parameters)
+        self.channel = self.connection.channel()
+        self.queue = self.channel.queue_declare(exclusive=True, arguments={'x-max-length': 1}).method.queue
+        self.channel.queue_bind(queue=self.queue, exchange=EXCHANGE, routing_key=self.routing_key)
 
-        return self.input_handler[from_stream].read()
-        
-    def write(self, packet, to_stream):
-        if to_stream not in self.output_handler:
-            return False
+    def read(self, timeout=30):
+        for i in range(timeout):
+            method, properties, body = self.channel.basic_get(queue=self.queue, no_ack=True)
+            if method is not None:
+                return True, (properties, body)
+            time.sleep(0.1)
+        return False, ''
 
-        self.output_handler[to_stream].write(packet.output())
-        return True
+    def write(self, frame, headers):
+        properties = pika.BasicProperties(
+            headers=headers,
+            delivery_mode=2,
+            timestamp=int(time.time() * 1000),
+            content_type='b',
+        )
+        try:
+            self.channel.basic_publish(
+                properties=properties,
+                exchange=EXCHANGE,
+                routing_key=ROUTING_KEY_EXPORT,
+                body=frame
+            )
+        except Exception as ex:
+            return False, str(ex)
+        return True, ''
 
-    def check_daytime(self, current_time, durations):
-        time_now = datetime.datetime.fromtimestamp(current_time)
+    def check_daytime(self, current_time):
+        time_now = datetime.datetime.fromtimestamp(current_time).time()
         time_start = time_end = None
-        for start, end in durations:
-            start_hours, start_minutes, start_seconds = start
-            end_hours, end_minutes, end_seconds = end
-            time_start = time_now.replace(hour=start_hours, minute=start_minutes, second=start_seconds)
-            time_end = time_now.replace(hour=end_hours, minute=end_minutes, second=end_seconds)
+        for start, end in self.daytime:
+            time_start = time_now.replace(hour=start.hour, minute=start.minute, second=start.second)
+            time_end = time_now.replace(hour=end.hour, minute=end.minute, second=end.second)
             if time_start <= time_now <= time_end:
                 return True, 0
             elif time_start > time_now:
@@ -92,89 +141,93 @@ class ImageCollectionProcessor(Processor):
         return False, int((end_of_today - time_now).total_seconds())
 
     def run(self):
-        for device in self.config:
-            device_option = self.config[device]
-            device_option['last_updated_time'] = time.time() - device_option['interval'] - 1
+        print('Collection starts for %s' % (self.device_name,))
+        try:
+            self.open()
+        except Exception as ex:
+            print('Could not open connection to pipeline: %s' % (str(ex),))
+            return
 
-        logger.info('Collection started')
-        while True:
+        last_updated = time.time() - (self.interval + 10)
+
+        while not self.stop_signal:
             try:
                 current_time = time.time()
 
-                for device in self.config:
-                    device_option = self.config[device]
-
-                    if current_time - device_option['last_updated_time'] > device_option['interval']:
-                        result, wait_time = self.check_daytime(current_time, device_option['daytime'])
-
-                        if result:
-                            f, packet = self.read(device)
-                            if f:
-                                packet.meta_data.update({'processing_software': os.path.basename(__file__)})
-                                self.write(packet, device)
-                                device_option['last_updated_time'] = current_time
-                                if device_option['verbose']:
-                                    logger.info('An image from %s has been published' % (device,))
-                        else:
-                            device_option['last_updated_time'] = current_time + min(wait_time, device_option['interval'])
-                    self.config[device] = device_option
-
+                if current_time - last_updated > self.interval:
+                    result, wait_time = self.check_daytime(current_time)
+                    if result:
+                        f, msg = self.read()
+                        if f:
+                            properties, frame = msg
+                            properties.headers.update({'processing_software': os.path.basename(__file__)})
+                            _f, _msg = self.write(frame, properties.headers)
+                            if _f:
+                                last_updated = current_time
+                                print('An image from %s has been published' % (self.device_name,))
+                            else:
+                                print('Failed to publish for %s; %s' % (self.device_name, _msg))
+                    else:
+                        last_updated = current_time + min(wait_time, self.interval)
                 time.sleep(1)
-            except KeyboardInterrupt:
+            except (KeyboardInterrupt, Exception) as ex:
+                print(str(ex))
                 break
-            except Exception as ex:
-                logger.error(str(ex))
-                break
+        print('Collection ended for %s' % (self.device_name,))
 
-EXCHANGE = 'image_pipeline'
-ROUTING_KEY_EXPORT = 'exporter'
 
 def main():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('-c', dest='config_file', help='Specify config file')
-    args = parser.parse_args()
-
-    config_file = None
-    if args.config_file:
-        config_file = args.config_file
-    else:
-        config_file = '/wagglerw/waggle/image_collector.conf'
-    
-    config = None
-    if os.path.isfile(config_file):
-        try:
-            with open(config_file) as file:
-                config = json.loads(file.read())
-        except Exception as ex:
-            logger.error('Cannot load configuration: %s' % (str(ex),))
-            exit(-1)
-    else:
-        config = default_configuration()
-        with open(config_file, 'w') as file:
-            file.write(json.dumps(config))
-        logger.info('No config specified; default will be used. For detail, check %s' % (config_file,))
-
-    processor = ImageCollectionProcessor()
-
+    global graceful_signal_to_kill
+    config = get_config()
     for device in config:
         try:
-            stream = RabbitMQStreamer(logger)
-            stream.config(EXCHANGE, device, ROUTING_KEY_EXPORT)
-            result, message = stream.connect()
-            if result:
-                processor.add_handler(stream, handler_name=device, handler_type='in-out')
-            else:
-                logger.error('Unable to set streamer for %s:%s ' % (device, message))
-                stream.close()
+            device_config = config[device]
+            daytime_durations = get_daytime_durations(device_config['daytime'])
+            interval = int(device_config['interval'])
+            device_config['daytime'] = daytime_durations
+            device_config['interval'] = interval
+            config[device] = device_config
         except Exception as ex:
-            logger.error(str(ex))
+            device_config = get_default_configuration()[device]
+            daytime_durations = get_daytime_durations(device_config['daytime'])
+            interval = int(device_config['interval'])
+            device_config['daytime'] = daytime_durations
+            device_config['interval'] = interval
+            config[device] = device_config
+            print('Could not load config properly fo %s. Use default.' % (device,))
 
-    processor.set_configs(config)
-    processor.run()
+    workers = []
+    for device in config:
+        device_config = config[device]
 
-    processor.close()
-    logger.info('Collector terminated')
+        worker = ImageCollectionWorker(
+            device,
+            device_config['daytime'],
+            device_config['interval']
+        )
+        worker.start()
+        workers.append(worker)
+
+    try:
+        while not graceful_signal_to_kill:
+            for worker in workers:
+                if not worker.is_alive():
+                    print('Worker %s is not alive. Restarting...' % (worker.device_name,))
+                    graceful_signal_to_kill = True
+            time.sleep(1)
+    except (KeyboardInterrupt, Exception):
+        pass
+    finally:
+        for worker in workers:
+            worker.stop_signal = True
+            worker.join()
+
+
+def sigterm_handler(signum, frame):
+    global graceful_signal_to_kill
+    graceful_signal_to_kill = True
+
 
 if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, sigterm_handler)
     main()

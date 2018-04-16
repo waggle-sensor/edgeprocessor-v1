@@ -1,119 +1,207 @@
-import base64
-import glob
-import json
-import logging
+#! /usr/bin/python3
+
 import os
-import os.path
-import pika
 import subprocess
 import time
-import cv2
-import signal
+import select
+from threading import Thread, Event
+from queue import Queue
 
-import sys
-sys.path.append('/usr/lib/waggle/edge_processor/image')
-from processor import *
+import v4l2capture
+import pika
+import signal
+import glob
+import json
 
 graceful_signal_to_kill = False
-datetime_format = '%Y-%m-%d %H:%M:%S'
+producer_name = os.path.basename(__file__)
+
+
+def get_default_configuration():
+    default_configuration = {
+        'top': {
+            'resolution': '3264x2448',
+            'rotate': 0,
+        },
+        'bottom': {
+            'resolution': '2592x1944',
+            'rotate': 180,
+        }
+    }
+    return default_configuration
+
+
+def get_rmq_connection():
+    try:
+        connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        channel = connection.channel()
+        channel.exchange_declare(exchange='image_pipeline', exchange_type='direct')
+        return channel
+    except Exception:
+        return None
+
+
+def send_to_rmq(channel, frame, timestamp, config):
+    headers = {
+        'node_id': config['node_id'],
+        'image_width': config['width'],
+        'image_height': config['height'],
+        'image_format': 'MJPG',
+        'image_size': len(frame),
+        'image_rotate': config['rotate'],
+        'device': config['device'],
+        'producer': producer_name,
+        'timestamp': str(timestamp)
+    }
+    properties = pika.BasicProperties(
+        headers=headers,
+        delivery_mode=2,
+        timestamp=int(timestamp * 1000),
+        content_type='b')
+    channel.basic_publish(
+        exchange='image_pipeline',
+        routing_key=config['device'],
+        properties=properties,
+        body=frame)
+
+
+class Camera(Thread):
+    def __init__(self, event, device, width, height):
+        Thread.__init__(self)
+        self.cap = v4l2capture.Video_device(device)
+        self.event = event
+        self.out = Queue(1)
+        self.width = width
+        self.height = height
+        self.is_closed = False
+
+    def open(self):
+        ret_x, ret_y = self.cap.set_format(self.width, self.height, fourcc='MJPG')
+        if self.width != ret_x or self.height != ret_y:
+            self.close()
+            return False
+        self.cap.create_buffers(30)
+        self.cap.queue_all_buffers()
+        return True
+
+    def close(self):
+        self.is_closed = True
+
+    def get(self):
+        if self.out.empty():
+            return False, None
+        return True, self.out.get()
+
+    def run(self):
+        try:
+            self.cap.start()
+            while not self.is_closed:
+                select.select((self.cap,), (), (),)  # 1 second timeout
+                raw_frame = self.cap.read_and_queue()
+                if len(raw_frame) > 0:
+                    if self.out.empty():
+                        self.out.put(raw_frame)
+                        self.event.set()
+        except Exception as ex:
+            print(str(ex))
+        finally:
+            self.is_closed = True
+            self.cap.close()
+
 
 def main():
-  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    global graceful_signal_to_kill
+    camera_devices = glob.glob('/dev/waggle_cam_*')
+    if len(camera_devices) == 0:
+        print('No available cameras detected!')
+        exit(1)
 
-  script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Load configuration
+    capture_config_file = '/wagglerw/waggle/image_capture.conf'
+    capture_config = None
+    try:
+        with open(capture_config_file) as config:
+            capture_config = json.loads(config.read())
+    except Exception:
+        capture_config = get_default_configuration()
+        with open(capture_config_file, 'w') as config:
+            config.write(json.dumps(capture_config, sort_keys=True, indent=4))
 
-  camera_devices = glob.glob('/dev/waggle_cam_*')
-  if len(camera_devices) == 0:
-    raise Exception('no available cameras detected')
+    # Get node_id for maker field of the images
+    command = ['arp -a 10.31.81.10 | awk \'{print $4}\' | sed \'s/://g\'']
+    node_id = str(subprocess.getoutput(command))
 
-  capture_config_file = '/wagglerw/waggle/image_capture.conf'
-  capture_config = None
-  if os.path.isfile(capture_config_file):
-    with open(capture_config_file) as config:
-      capture_config = json.loads(config.read())
-  else:
-    capture_config = {'top':{'resolution':'3264x2448', 'skip_frames':20, 'rotate': 0, 'factor':90,
-                             'interval':10},
-                      'bottom':{'resolution':'2592x1944', 'skip_frames':20, 'rotate': 180, 'factor':90,
-                                'interval':10}}
-    with open(capture_config_file, 'w') as config:
-      config.write(json.dumps(capture_config))
+    rmq_channel = get_rmq_connection()
+    if rmq_channel is None:
+        print('Could not connect to RabbitMQ!')
+        exit(1)
 
-  command = ['arp -a 10.31.81.10 | awk \'{print $4}\' | sed \'s/://g\'']
-  node_id = str(subprocess.getoutput(command))
+    cam_capture = {}
+    for camera_device in camera_devices:
+        try:
+            config = []
+            for camera_name in capture_config:
+                if camera_name in camera_device:
+                    config = capture_config[camera_name]
+                    config.update({'device': camera_name})
+                    config['node_id'] = node_id
 
-  connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-  channel = connection.channel()
+                    resolution = config['resolution'].split('x')
+                    config['width'] = int(resolution[0])
+                    config['height'] = int(resolution[1])
+                    e = Event()
+                    cap = Camera(
+                        event=e,
+                        device=camera_device,
+                        width=config['width'],
+                        height=config['height']
+                    )
 
-  channel.exchange_declare(exchange='image_pipeline', exchange_type='direct')
+                    if cap.open():
+                        cam_capture[camera_device] = [cap, e, config]
+                    else:
+                        raise Exception('Could not set the resolution')
+        except Exception as ex:
+            print('Could not configure %s: %s' % (camera_device, ex))
 
-  cam_capture = {}
-  for camera_device in camera_devices:
-    try:      
-      config = []
-      for camera in capture_config:
-        if camera in camera_device:
-          config = capture_config[camera]
-          config.update({'device':camera})
+    for device in cam_capture:
+        cap, event, config = cam_capture[device]
+        print('%s is starting...' % (device,))
+        cap.start()
+        time.sleep(1)
 
-      if isinstance(config, dict):
-        resolution = config['resolution'].split('x')
-        config['width'] = resolution[0]
-        config['height'] = resolution[1]
-        cap = cv2.VideoCapture(camera_device)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(config['width']))
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, int(config['height']))
-        cam_capture[camera_device] = [cap, config, time.time() - config['interval'], 0]
+    try:
+        while not graceful_signal_to_kill:
+            for device in cam_capture:
+                cap, event, config = cam_capture[device]
+                if cap.is_closed:
+                    raise Exception('%s is closed. Restarting...' % (device,))
+                else:
+                    event.wait(0.01)
+                    f, frame_raw = cap.get()
+                    if f:
+                        send_to_rmq(rmq_channel, frame_raw, time.time(), config)
+                    event.clear()
+    except KeyboardInterrupt:
+        pass
     except Exception as ex:
-      logging.warning('Could not configure %s: %s' % (camera_device, ex))
-      continue
+        print(str(ex))
+    finally:
+        graceful_signal_to_kill = False
+        for device in cam_capture:
+            cap, event, config = cam_capture[device]
+            cap.close()
+            cap.join()
 
-  try:
-    while not graceful_signal_to_kill:
-      for device in cam_capture:
-        cap, config, last_updated, failure_count = cam_capture[device]
-        current_time = time.time()
-        if current_time - last_updated > config['interval']:
-          last_updated = current_time
-          cam_capture[device] = [cap, config, last_updated, failure_count]
-          f, frame = cap.read()
-          if f:
-            rows, cols = frame.shape[:2]
-            rotation_matrix = cv2.getRotationMatrix2D((cols/2, rows/2), config['rotate'], 1)
-            rotated_frame = cv2.warpAffine(frame, rotation_matrix, (cols, rows))
-            byte_frame = cv2.imencode('.jpg', rotated_frame)[1].tostring()
 
-            logging.info("inserting {} camera image into processing pipeline...".format(device))
-            packet = Packet()
-            packet.meta_data = {'node_id': node_id,
-                                     'image_width': config['width'],
-                                     'image_height': config['height'],
-                                     'device': os.path.basename(device),
-                                     'producer': os.path.basename(__file__),
-                                     'datetime': time.strftime(datetime_format, time.gmtime())}
-            packet.raw = byte_frame
-
-            channel.basic_publish(exchange='image_pipeline', routing_key=config['device'], body=packet.output())
-          else:
-            failure_count += 1
-            #TODO: frequent failure of obtaining images needs to be handled here
-        time.sleep(0.1)
-  except KeyboardInterrupt:
-    channel.stop_consuming()
-  connection.close()
-
-  for device in cam_capture:
-    cap, config, last_updated, failure_count = cam_capture[device]
-    cap.release()
-
-  # TODO:
-  # 1) add RPC control of configuration
-  # 2) handle SIGTERM signals
-
+# TODO:
+# 1) add RPC control of configuration
+# 2) handle SIGTERM signals
 def sigterm_handler(signum, frame):
-  global graceful_signal_to_kill
-  graceful_signal_to_kill = True
+    global graceful_signal_to_kill
+    graceful_signal_to_kill = True
+
 
 if __name__ == '__main__':
-  signal.signal(signal.SIGTERM, sigterm_handler)
-  main()
+    signal.signal(signal.SIGTERM, sigterm_handler)
+    main()

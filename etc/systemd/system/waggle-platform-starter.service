@@ -9,7 +9,7 @@ ConditionPathExists=/root/waggle_platform_starter
 
 [Service]
 WorkingDirectory=/usr/lib/waggle/edge_processor/scripts
-ExecStart=/usr/lib/waggle/edge_processor/scripts/waggle-platform-starter-service --force
+ExecStart=/usr/bin/python3 -u /usr/lib/waggle/edge_processor/scripts/waggle-platform-starter-service
 
 # keep trying if there was a fatal error during an attempt to register
 Restart=always
