@@ -1,41 +1,29 @@
-#!/usr/bin/env python3
-import argparse
-import logging
+#!/usr/bin/python3
+
 import subprocess
 import os
-from waggle.protocol.v4.pidfile import PidFile, AlreadyRunning
 
-logger = logging.getLogger("waggle-platform-starter service")
-logger.setLevel(logging.INFO)
 
 def call(command):
-    cmd =  subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+    cmd = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
     output = cmd.communicate()[0].decode().strip()
     return cmd.returncode, output
+
 
 def check_starter():
     starter = '/root/waggle_platform_starter'
     if os.path.isfile(starter):
-        os.remove(starter)
-        logger.info('Switching to operation mode')
+        print('Switching to operation mode...')
         rc, out = call('waggle-switch-to-operation-mode')
+        if rc == 0:
+            os.remove(starter)
+            print('Switching done')
+        else:
+            print('Failed to switch to operation mode')
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--force', dest='force', help='kill other processes and start', action='store_true')
-    args = parser.parse_args()
     try:
-        pid_file = "/var/run/waggle/communications.pid"
-        with PidFile(pid_file, force=args.force, name=os.path.basename(__file__)):
-            check_starter()
-
-    except AlreadyRunning as e:
-        logger.error(str(e))
-        logger.error("Please use systemctl to start and stop this script.")
-    except KeyboardInterrupt as k:
-        #terminate the external communication processes
-        for name, subhash in name2func.items():
-            logger.info( '(KeyboardInterrupt) shutting down ' + name)
-            name2process[name].terminate()
-    except Exception as e:
-        logger.error("Error (%s): %s" % ( str(type(e)), str(e)))
+        check_starter()
+    except Exception as ex:
+        print(str(ex))
