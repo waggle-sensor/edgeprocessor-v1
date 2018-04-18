@@ -139,7 +139,8 @@ And then build TensorFlow. Warning: This takes a really, really long time. Sever
 ```
 bazel build -c opt --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 8192,8.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
 
-## Build commend that cause error --> Oop, NEON doesn’t work. Ok, let’s turn that off. But, we’ll want to fix it later: bazel build -c opt --copt="-mfpu=neon-vfpv4" --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 1024,4.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
+## Build commend that cause error --> Oop, NEON doesn’t work. Ok, let’s turn that off. But, we’ll want to fix it later: 
+bazel build -c opt --copt="-mfpu=neon-vfpv4" --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 1024,4.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
 ```
 
 
