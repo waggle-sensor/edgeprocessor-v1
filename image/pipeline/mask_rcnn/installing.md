@@ -11,6 +11,15 @@ sudo apt-get install oracle-java8-installer -y
 sudo apt-get install oracle-java8-unlimited-jce-policy
 ```
 
+## Get some swap
+
+Pop in a blank 8GB USB drive, which will get erased, and run ```sudo blkid```. Check the device name, usually /dev/sda1, and with that name, run if the name of the device is allocates as ```sda```:
+```
+sudo mkswap /dev/sda
+sudo swapon /dev/sda
+sudo swapon
+```
+
 ## Install Bazel:
 
 ```
