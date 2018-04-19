@@ -146,7 +146,7 @@ Configuration finished
 ```
 And then build TensorFlow. Warning: This takes a really, really long time. Several hours.,
 ```
-bazel build -c opt --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 2048,8.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
+bazel build -c opt --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 8192,8.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
 
 ## Build error -->ERROR: /root/tensorflow/tensorflow/core/BUILD:2074:1: C++ compilation of rule '//tensorflow/core:core_cpu_base' failed (Exit 4): gcc failed: error executing command
 bazel build -c opt --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 8192,8.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
