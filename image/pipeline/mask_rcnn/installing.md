@@ -1,5 +1,5 @@
 # Install dependencies and libraries for Mask R-CNN
-Especially for tensorflow:
+Especially for tensorflow, refer [here](https://hackernoon.com/running-yolo-on-odroid-yolodroid-5a89481ec141):
 
 ## Install JAVA:
 Will install Java for bazel. It takes about 50MB.
