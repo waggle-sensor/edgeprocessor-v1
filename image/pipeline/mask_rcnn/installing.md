@@ -154,3 +154,10 @@ Built! Now install it..
 bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg
 sudo pip3 install /tmp/tensorflow_pkg/tensorflow-1.7.0-cp35-cp35m-linux_armv7l.whl --upgrade --ignore-installed
 ```
+
+## Cleaning Up
+There's one last bit of house-cleaning we need to do before we're done: remove the USB drive that we've been using as swap.
+```
+sudo swapoff /dev/sda
+reboot
+```
