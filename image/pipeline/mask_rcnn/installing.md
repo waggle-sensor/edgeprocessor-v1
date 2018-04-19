@@ -149,7 +149,7 @@ And then build TensorFlow. Warning: This takes a really, really long time. Sever
 bazel build -c opt --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 8192,8.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
 ```
 
-Built! Quick! Install it!
+Built! Now install it..
 ```
 bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg
 sudo pip3 install /tmp/tensorflow_pkg/tensorflow-1.7.0-cp35-cp35m-linux_armv7l.whl --upgrade --ignore-installed
