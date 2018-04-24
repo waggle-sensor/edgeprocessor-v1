@@ -25,10 +25,11 @@ sudo swapon
 ```
 apt-get install unzip zip
 wget --no-check-certificate https://github.com/bazelbuild/bazel/releases/download/0.11.1/bazel-0.11.1-dist.zip
-unzip bazel-0.11.1-dist.zip -d bazel-0.11.1-dist
+unzip -q bazel-0.11.1-dist.zip -d bazel-0.11.1-dist
 ulimit -c unlimited
 # mkdir /tmp/bazel_tmp
 # export TMPDIR=/tmp/bazel_tmp
+cd bazel-0.11.1-dist
 nano scripts/bootstrap/compile.sh
 ```
 In ```nano scripts/bootstrap/compile.sh``` find line 117:
