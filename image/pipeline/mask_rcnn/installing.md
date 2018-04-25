@@ -1,5 +1,5 @@
 # Install dependencies and libraries for Mask R-CNN
-Especially for tensorflow:
+Especially for tensorflow, refer [here](https://hackernoon.com/running-yolo-on-odroid-yolodroid-5a89481ec141):
 
 ## Install JAVA:
 Will install Java for bazel. It takes about 50MB.
@@ -11,15 +11,25 @@ sudo apt-get install oracle-java8-installer -y
 sudo apt-get install oracle-java8-unlimited-jce-policy
 ```
 
+## Get some swap
+
+Pop in a blank 8GB USB drive, which will get erased, and run ```sudo blkid```. Check the device name, usually /dev/sda1, and with that name, run if the name of the device is allocates as ```sda```:
+```
+sudo mkswap /dev/sda
+sudo swapon /dev/sda
+sudo swapon
+```
+
 ## Install Bazel:
 
 ```
 apt-get install unzip zip
 wget --no-check-certificate https://github.com/bazelbuild/bazel/releases/download/0.11.1/bazel-0.11.1-dist.zip
-unzip bazel-0.11.1-dist.zip -d bazel-0.11.1-dist
+unzip -q bazel-0.11.1-dist.zip -d bazel-0.11.1-dist
 ulimit -c unlimited
 # mkdir /tmp/bazel_tmp
 # export TMPDIR=/tmp/bazel_tmp
+cd bazel-0.11.1-dist
 nano scripts/bootstrap/compile.sh
 ```
 In ```nano scripts/bootstrap/compile.sh``` find line 117:
@@ -134,10 +144,26 @@ Preconfigured Bazel build configs. You can use any of the below by adding "--con
 	--config=mkl         	# Build with MKL support.
 	--config=monolithic  	# Config for mostly static monolithic build.
 Configuration finished
-
+```
 And then build TensorFlow. Warning: This takes a really, really long time. Several hours.,
 ```
-bazel build -c opt --copt="-mfpu=neon-vfpv4" --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 1024,4.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
+bazel build -c opt --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 8192,8.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
+
+or
+
+bazel build -c opt --copt="-mfpu=neon-vfpv4" --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 8192,8.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
 ```
 
+Built! Now install it..
+```
+bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg
+sudo pip3 install /tmp/tensorflow_pkg/tensorflow-1.7.0-cp35-cp35m-linux_armv7l.whl --upgrade --ignore-installed
+```
+
+## Cleaning Up
+There's one last bit of house-cleaning we need to do before we're done: remove the USB drive that we've been using as swap.
+```
+sudo swapoff /dev/sda
+reboot
+```
 
