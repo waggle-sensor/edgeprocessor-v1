@@ -9,7 +9,7 @@ import select
 from threading import Thread, Event
 from queue import Queue
 
-from v4l2 import *
+import v4l2
 import pika
 import signal
 import glob
@@ -88,23 +88,21 @@ class Camera(object):
         self.fd.close()
 
     def _create_buffer(self, buffer_size=30):
-        req = v4l2_requestbuffers()
-        req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE
-        req.memory = V4L2_MEMORY_MMAP
+        req = v4l2.v4l2_requestbuffers()
+        req.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
+        req.memory = v4l2.V4L2_MEMORY_MMAP
         req.count = buffer_size  # nr of buffer frames
-        fcntl.ioctl(self.fd, VIDIOC_REQBUFS, req)  # tell the driver that we want some buffers 
-        print("req.count", req.count)
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_REQBUFS, req)  # tell the driver that we want some buffers
 
         self.buffers = []
- 
         for ind in range(req.count):
             # setup a buffer
-            buf = v4l2_buffer()
-            buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE
-            buf.memory = V4L2_MEMORY_MMAP
+            buf = v4l2.v4l2_buffer()
+            buf.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
+            buf.memory = v4l2.V4L2_MEMORY_MMAP
             buf.index = ind
-            fcntl.ioctl(self.fd, VIDIOC_QUERYBUF, buf)
-         
+            fcntl.ioctl(self.fd, v4l2.VIDIOC_QUERYBUF, buf)
+
             mm = mmap.mmap(
                 self.fd.fileno(),
                 buf.length,
@@ -113,37 +111,37 @@ class Camera(object):
                 offset=buf.m.offset
             )
             self.buffers.append(mm)
-         
+
             # queue the buffer for capture
-            fcntl.ioctl(self.fd, VIDIOC_QBUF, buf)
+            fcntl.ioctl(self.fd, v4l2.VIDIOC_QBUF, buf)
 
     def print_capability(self):
-        cp = v4l2_capability()
-        fcntl.ioctl(self.fd, VIDIOC_QUERYCAP, cp)
+        cp = v4l2.v4l2_capability()
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_QUERYCAP, cp)
         print(cp.driver)
         print("Draiver:", "".join((chr(c) for c in cp.driver)))
         print("Name:", "".join((chr(c) for c in cp.card)))
-        print("Is a video capture device?", bool(cp.capabilities & V4L2_CAP_VIDEO_CAPTURE))
-        print("Supports read() call?", bool(cp.capabilities &  V4L2_CAP_READWRITE))
-        print("Supports streaming?", bool(cp.capabilities & V4L2_CAP_STREAMING))    
+        print("Is a video capture device?", bool(cp.capabilities & v4l2.V4L2_CAP_VIDEO_CAPTURE))
+        print("Supports read() call?", bool(cp.capabilities & v4l2.V4L2_CAP_READWRITE))
+        print("Supports streaming?", bool(cp.capabilities & v4l2.V4L2_CAP_STREAMING))
 
     def _set_resolution(self, width, height, pixelformat='MJPG'):
-        fmt = v4l2_format()
-        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE
-        fcntl.ioctl(self.fd, VIDIOC_G_FMT, fmt)  # get current settings
+        fmt = v4l2.v4l2_format()
+        fmt.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_G_FMT, fmt)  # get current settings
         fmt.fmt.pix.width = width
         fmt.fmt.pix.height = height
         fourcc = (ord(pixelformat[0])) | (ord(pixelformat[1]) << 8) | (ord(pixelformat[2]) << 16) | (ord(pixelformat[3]) << 24)
         fmt.fmt.pix.pixelformat = fourcc
-        fcntl.ioctl(self.fd, VIDIOC_S_FMT, fmt)
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_S_FMT, fmt)
 
     def _start(self):
-        self.buf_type = v4l2_buf_type(V4L2_BUF_TYPE_VIDEO_CAPTURE)
-        fcntl.ioctl(self.fd, VIDIOC_STREAMON, self.buf_type)
+        self.buf_type = v4l2.v4l2_buf_type(v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE)
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_STREAMON, self.buf_type)
 
     def _stop(self):
         if hasattr(self, 'buf_type'):
-            fcntl.ioctl(self.fd, VIDIOC_STREAMOFF, self.buf_type)
+            fcntl.ioctl(self.fd, v4l2.VIDIOC_STREAMOFF, self.buf_type)
 
     def configure_and_go(self, width, height, buffer_size=30):
         self._set_resolution(width, height)
@@ -152,17 +150,15 @@ class Camera(object):
 
     def capture(self):
         select.select([self.fd], [], [])
-        buf = v4l2_buffer()
-        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE
-        buf.memory = V4L2_MEMORY_MMAP
-        fcntl.ioctl(self.fd, VIDIOC_DQBUF, buf)  # get image from the driver queue
-        # print("buf.index", buf.index)
+        buf = v4l2.v4l2_buffer()
+        buf.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
+        buf.memory = v4l2.V4L2_MEMORY_MMAP
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_DQBUF, buf)  # get image from the driver queue
 
         mm = self.buffers[buf.index]
         result = mm.read(buf.bytesused)
-        #vid.write(bytes((bit for i, bit in enumerate(mm.read()) if not i % 2)))  # convert yuyv to grayscale
         mm.seek(0)
-        fcntl.ioctl(self.fd, VIDIOC_QBUF, buf)  # requeue the buffer
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_QBUF, buf)  # requeue the buffer
         return result
 
 
