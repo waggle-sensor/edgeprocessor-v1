@@ -78,12 +78,10 @@ class Camera(object):
         return self.device
 
     def __enter__(self):
-        print('ha')
         self.fd = open(self.device, 'rb+', buffering=0)
         return self
 
     def __exit__(self, type, value, traceback):
-        print('ah')
         self._stop()
         self.fd.close()
 
@@ -239,7 +237,7 @@ def main():
                     config['width'] = int(resolution[0])
                     config['height'] = int(resolution[1])
                     e = Event()
-                    cap = Camera(
+                    cap = CaptureWorker(
                         event=e,
                         device=camera_device,
                         width=config['width'],
@@ -290,10 +288,4 @@ def sigterm_handler(signum, frame):
 
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, sigterm_handler)
-    # print('image producer is currently under construction...Looping infinitely...')
-    # try:
-    #     while True:
-    #         time.sleep(1)
-    # except (KeyboardInterrupt, Exception) as ex:
-    #     pass
     main()
