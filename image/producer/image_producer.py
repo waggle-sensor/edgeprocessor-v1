@@ -204,4 +204,10 @@ def sigterm_handler(signum, frame):
 
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, sigterm_handler)
-    main()
+    print('image producer is currently under construction...Looping infinitely...')
+    try:
+        while True:
+            time.sleep(1)
+    except (KeyboardInterrupt, Exception) as ex:
+        pass
+    #main()

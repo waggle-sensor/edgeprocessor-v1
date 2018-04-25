@@ -14,12 +14,14 @@ def check_starter():
     starter = '/root/waggle_platform_starter'
     if os.path.isfile(starter):
         print('Switching to operation mode...')
+        os.remove(starter)
         rc, out = call('waggle-switch-to-operation-mode')
         if rc == 0:
-            os.remove(starter)
             print('Switching done')
         else:
-            print('Failed to switch to operation mode')
+            print('Failed to switch to operation mode. Try it later.')
+            with open(starter, 'a'):
+                os.utime(starter, None)
 
 
 if __name__ == "__main__":

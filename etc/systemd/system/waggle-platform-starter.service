@@ -13,7 +13,7 @@ ExecStart=/usr/bin/python3 -u /usr/lib/waggle/edge_processor/scripts/waggle-plat
 
 # keep trying if there was a fatal error during an attempt to register
 Restart=always
-RestartSec=30
+RestartSec=60
 
 [Install]
 WantedBy=waggle-core.target
