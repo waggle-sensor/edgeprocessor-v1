@@ -145,7 +145,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             ax.add_patch(p)
 
     ax.imshow(masked_image.astype(np.uint8))
-    plt.savefig('splash_vis_{:%Y%m%dT%H%M%S}.png'.format(datetime.datetime.now()))
+    # plt.savefig('splash_vis_{:%Y%m%dT%H%M%S}.png'.format(datetime.datetime.now()))
+    plt.savefig('splash.png')
 
     display_end = time.time()
     print("Display Elapsed %.2f" % (display_end - display_end))
@@ -223,3 +224,4 @@ if __name__ == '__main__':
 
     main_end = time.time()
     print("Evaluation Elapsed %.2f" % (main_end - main_start))
+    os.system('gvfs-open ./splash.png')
