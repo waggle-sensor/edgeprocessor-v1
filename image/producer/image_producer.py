@@ -152,7 +152,6 @@ class Camera(object):
         buf.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
         buf.memory = v4l2.V4L2_MEMORY_MMAP
         fcntl.ioctl(self.fd, v4l2.VIDIOC_DQBUF, buf)  # get image from the driver queue
-
         mm = self.buffers[buf.index]
         result = mm.read(buf.bytesused)
         mm.seek(0)
@@ -179,15 +178,22 @@ class CaptureWorker(Thread):
         return True, self.out.get()
 
     def run(self):
+        MAX_FAILURE = 30
+        failure_count = 0
         try:
             with Camera(self.device) as camera:
                 camera.configure_and_go(self.width, self.height)
                 while not self.is_closed:
                     raw_frame = camera.capture()
                     if len(raw_frame) > 0:
+                        failure_count = 0
                         if self.out.empty():
                             self.out.put(raw_frame)
                             self.event.set()
+                    else:
+                        failure_count += 1
+                        if failure_count > MAX_FAILURE:
+                            raise Exception('Read error on %s. halting...' % (self.device,))
         except KeyboardInterrupt:
             print('Interrupted')
         except Exception as ex:
