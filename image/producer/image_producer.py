@@ -3,11 +3,13 @@
 import os
 import subprocess
 import time
+import fcntl
+import mmap
 import select
 from threading import Thread, Event
 from queue import Queue
 
-import v4l2capture
+import v4l2
 import pika
 import signal
 import glob
@@ -65,24 +67,107 @@ def send_to_rmq(channel, frame, timestamp, config):
         body=frame)
 
 
-class Camera(Thread):
+class Camera(object):
+    def __init__(self, device):
+        if os.path.exists(device):
+            self.device = device
+        else:
+            raise Exception('Device not available')
+
+    def __repr__(self):
+        return self.device
+
+    def __enter__(self):
+        self.fd = open(self.device, 'rb+', buffering=0)
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self._stop()
+        self.fd.close()
+
+    def _create_buffer(self, buffer_size=30):
+        req = v4l2.v4l2_requestbuffers()
+        req.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
+        req.memory = v4l2.V4L2_MEMORY_MMAP
+        req.count = buffer_size  # nr of buffer frames
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_REQBUFS, req)  # tell the driver that we want some buffers
+
+        self.buffers = []
+        for ind in range(req.count):
+            # setup a buffer
+            buf = v4l2.v4l2_buffer()
+            buf.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
+            buf.memory = v4l2.V4L2_MEMORY_MMAP
+            buf.index = ind
+            fcntl.ioctl(self.fd, v4l2.VIDIOC_QUERYBUF, buf)
+
+            mm = mmap.mmap(
+                self.fd.fileno(),
+                buf.length,
+                mmap.MAP_SHARED,
+                mmap.PROT_READ | mmap.PROT_WRITE,
+                offset=buf.m.offset
+            )
+            self.buffers.append(mm)
+
+            # queue the buffer for capture
+            fcntl.ioctl(self.fd, v4l2.VIDIOC_QBUF, buf)
+
+    def print_capability(self):
+        cp = v4l2.v4l2_capability()
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_QUERYCAP, cp)
+        print(cp.driver)
+        print("Draiver:", "".join((chr(c) for c in cp.driver)))
+        print("Name:", "".join((chr(c) for c in cp.card)))
+        print("Is a video capture device?", bool(cp.capabilities & v4l2.V4L2_CAP_VIDEO_CAPTURE))
+        print("Supports read() call?", bool(cp.capabilities & v4l2.V4L2_CAP_READWRITE))
+        print("Supports streaming?", bool(cp.capabilities & v4l2.V4L2_CAP_STREAMING))
+
+    def _set_resolution(self, width, height, pixelformat='MJPG'):
+        fmt = v4l2.v4l2_format()
+        fmt.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_G_FMT, fmt)  # get current settings
+        fmt.fmt.pix.width = width
+        fmt.fmt.pix.height = height
+        fourcc = (ord(pixelformat[0])) | (ord(pixelformat[1]) << 8) | (ord(pixelformat[2]) << 16) | (ord(pixelformat[3]) << 24)
+        fmt.fmt.pix.pixelformat = fourcc
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_S_FMT, fmt)
+
+    def _start(self):
+        self.buf_type = v4l2.v4l2_buf_type(v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE)
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_STREAMON, self.buf_type)
+
+    def _stop(self):
+        if hasattr(self, 'buf_type'):
+            fcntl.ioctl(self.fd, v4l2.VIDIOC_STREAMOFF, self.buf_type)
+
+    def configure_and_go(self, width, height, buffer_size=30):
+        self._set_resolution(width, height)
+        self._create_buffer(buffer_size)
+        self._start()
+
+    def capture(self):
+        select.select([self.fd], [], [])
+        buf = v4l2.v4l2_buffer()
+        buf.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
+        buf.memory = v4l2.V4L2_MEMORY_MMAP
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_DQBUF, buf)  # get image from the driver queue
+        mm = self.buffers[buf.index]
+        result = mm.read(buf.bytesused)
+        mm.seek(0)
+        fcntl.ioctl(self.fd, v4l2.VIDIOC_QBUF, buf)  # requeue the buffer
+        return result
+
+
+class CaptureWorker(Thread):
     def __init__(self, event, device, width, height):
         Thread.__init__(self)
-        self.cap = v4l2capture.Video_device(device)
+        self.device = device
         self.event = event
         self.out = Queue(1)
         self.width = width
         self.height = height
         self.is_closed = False
-
-    def open(self):
-        ret_x, ret_y = self.cap.set_format(self.width, self.height, fourcc='MJPG')
-        if self.width != ret_x or self.height != ret_y:
-            self.close()
-            return False
-        self.cap.create_buffers(30)
-        self.cap.queue_all_buffers()
-        return True
 
     def close(self):
         self.is_closed = True
@@ -93,20 +178,28 @@ class Camera(Thread):
         return True, self.out.get()
 
     def run(self):
+        MAX_FAILURE = 30
+        failure_count = 0
         try:
-            self.cap.start()
-            while not self.is_closed:
-                select.select((self.cap,), (), (),)  # 1 second timeout
-                raw_frame = self.cap.read_and_queue()
-                if len(raw_frame) > 0:
-                    if self.out.empty():
-                        self.out.put(raw_frame)
-                        self.event.set()
+            with Camera(self.device) as camera:
+                camera.configure_and_go(self.width, self.height)
+                while not self.is_closed:
+                    raw_frame = camera.capture()
+                    if len(raw_frame) > 0:
+                        failure_count = 0
+                        if self.out.empty():
+                            self.out.put(raw_frame)
+                            self.event.set()
+                    else:
+                        failure_count += 1
+                        if failure_count > MAX_FAILURE:
+                            raise Exception('Read error on %s. halting...' % (self.device,))
+        except KeyboardInterrupt:
+            print('Interrupted')
         except Exception as ex:
             print(str(ex))
         finally:
             self.is_closed = True
-            self.cap.close()
 
 
 def main():
@@ -150,17 +243,14 @@ def main():
                     config['width'] = int(resolution[0])
                     config['height'] = int(resolution[1])
                     e = Event()
-                    cap = Camera(
+                    cap = CaptureWorker(
                         event=e,
                         device=camera_device,
                         width=config['width'],
                         height=config['height']
                     )
 
-                    if cap.open():
-                        cam_capture[camera_device] = [cap, e, config]
-                    else:
-                        raise Exception('Could not set the resolution')
+                    cam_capture[camera_device] = [cap, e, config]
         except Exception as ex:
             print('Could not configure %s: %s' % (camera_device, ex))
 
@@ -204,10 +294,4 @@ def sigterm_handler(signum, frame):
 
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, sigterm_handler)
-    print('image producer is currently under construction...Looping infinitely...')
-    try:
-        while True:
-            time.sleep(1)
-    except (KeyboardInterrupt, Exception) as ex:
-        pass
-    #main()
+    main()

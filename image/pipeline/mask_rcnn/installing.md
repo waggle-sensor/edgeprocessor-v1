@@ -17,7 +17,7 @@ sudo apt-get install default-jre
 sudo apt-get install default-jdk
 sudo add-apt-repository ppa:webupd8team/java
 sudo apt-get update
-sudo apt-get install oracle-java9-installer
+sudo apt-get install oracle-java8-installer
 ```
 
 ## Get some swap
@@ -153,7 +153,7 @@ Preconfigured Bazel build configs. You can use any of the below by adding "--con
 	--config=mkl         	# Build with MKL support.
 	--config=monolithic  	# Config for mostly static monolithic build.
 Configuration finished
-
+```
 And then build TensorFlow. Warning: This takes a really, really long time. Several hours.,
 ```
 bazel build -c opt --copt="-funsafe-math-optimizations" --copt="-ftree-vectorize" --copt="-fomit-frame-pointer" --local_resources 8192,8.0,1.0 --verbose_failures tensorflow/tools/pip_package:build_pip_package
