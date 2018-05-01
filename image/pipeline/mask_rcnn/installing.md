@@ -22,9 +22,11 @@ sudo apt-get install oracle-java8-installer
 
 ## Install Protobuf (For bazel build):
 ```
+apt-get install curl
+apt-get install automake
 git clone https://github.com/google/protobuf.git
 cd protobuf
-git checkout tags/v3.5.0
+git checkout tags/v3.5.2
 ./autogen.sh
 LDFLAGS=-static ./configure --prefix=$(pwd)/../
 sed -i -e 's/LDFLAGS = -static/LDFLAGS = -all-static/' ./src/Makefile
