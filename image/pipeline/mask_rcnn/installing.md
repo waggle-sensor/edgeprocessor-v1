@@ -20,6 +20,17 @@ sudo apt-get update
 sudo apt-get install oracle-java8-installer
 ```
 
+## Install Protobuf (For bazel build):
+```
+git clone https://github.com/google/protobuf.git
+cd protobuf
+git checkout tags/v3.5.0
+./autogen.sh
+LDFLAGS=-static ./configure --prefix=$(pwd)/../
+sed -i -e 's/LDFLAGS = -static/LDFLAGS = -all-static/' ./src/Makefile
+make -j4
+```
+
 ## Get some swap
 
 Pop in a blank 8GB USB drive, which will get erased, and run ```sudo blkid```. Check the device name, usually /dev/sda1, and with that name, run if the name of the device is allocates as ```sda```:
