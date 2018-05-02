@@ -24,6 +24,7 @@ sudo apt-get install oracle-java8-installer
 ```
 apt-get install curl
 apt-get install automake
+locale-gen en_US.UTF-8
 git clone https://github.com/google/protobuf.git
 cd protobuf
 git checkout tags/v3.5.2
