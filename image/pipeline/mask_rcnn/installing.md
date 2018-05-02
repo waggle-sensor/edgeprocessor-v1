@@ -58,10 +58,21 @@ In ```nano scripts/bootstrap/compile.sh``` find line 117:
 ```
 "run "${JAVAC}" -classpath "${classpath}" -sourcepath "${sourcepath}""
 ```
-and add -J-Xms256m -J-Xmx384M as:
+and add ```-J-Xms256m -J-Xmx384M``` as:
 ```
 " run "${JAVAC}" -J-Xms256m -J-Xmx384m -classpath "${classpath}" -sourcepath "${sourcepath}""
 ```
+In ```nano tools/cpp/lib_cc_configure.bzl``` find line 93:
+```
+def execute(repository_ctx, command, environment = None,
+  """Execute a command, return stdout if succeed and throw an error if it fails. Doesn't %-escape the result!"""
+```
+and add ```return "arm"``` as:
+```
+def get_cpu_value(repository_ctx):
+  return "arm"
+```
+
 And then,
 ```
 ./complie.sh
