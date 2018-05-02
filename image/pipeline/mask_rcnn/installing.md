@@ -76,7 +76,7 @@ def get_cpu_value(repository_ctx):
 
 And then,
 ```
-./complie.sh
+./compile.sh
  sudo cp /root/bazel11/output/bazel /usr/local/bin/bazel
 ```
 If tensorflow cannot find bazel excution file in ```/usr/bin/bazel```, then it will complain that it cannot find bazel so you need to install bazel.
