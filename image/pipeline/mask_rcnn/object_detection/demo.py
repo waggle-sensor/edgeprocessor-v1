@@ -11,6 +11,8 @@ Modified by Seongha Park
     python3 demo.py --image=<URL or path to file>
 """
 
+from capture import capture_frame
+
 import time
 
 import os
@@ -201,6 +203,10 @@ if __name__ == '__main__':
                         metavar="path or URL to image",
                         help='Image to apply the color splash effect on')
     args = parser.parse_args()
+
+    if args.image == None:
+        capture_frame()
+        args.image = ROOT_DIR + '/opencv_frame_0.png'
 
     config = InferenceConfig()
 
