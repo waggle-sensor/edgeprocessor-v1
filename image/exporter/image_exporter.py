@@ -118,7 +118,7 @@ def main():
 
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
-    channel.exchange_declare(exchange=EXCHANGE, exchange_type='direct')
+    channel.exchange_declare(exchange=EXCHANGE, exchange_type='direct', durable=True)
     queue = channel.queue_declare(exclusive=True)
 
     # Binding consistently fails on a clean RMQ broker unless

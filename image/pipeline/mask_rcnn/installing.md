@@ -20,6 +20,20 @@ sudo apt-get update
 sudo apt-get install oracle-java8-installer
 ```
 
+## Install Protobuf (For bazel build):
+```
+apt-get install curl
+apt-get install automake
+apt-get install libtool
+git clone https://github.com/google/protobuf.git
+cd protobuf
+git checkout tags/v3.5.2
+./autogen.sh
+LDFLAGS=-static ./configure --prefix=$(pwd)/../
+sed -i -e 's/LDFLAGS = -static/LDFLAGS = -all-static/' ./src/Makefile
+make -j4
+```
+
 ## Get some swap
 
 Pop in a blank 8GB USB drive, which will get erased, and run ```sudo blkid```. Check the device name, usually /dev/sda1, and with that name, run if the name of the device is allocates as ```sda```:
@@ -45,13 +59,24 @@ In ```nano scripts/bootstrap/compile.sh``` find line 117:
 ```
 "run "${JAVAC}" -classpath "${classpath}" -sourcepath "${sourcepath}""
 ```
-and add -J-Xms256m -J-Xmx384M as:
+and add ```-J-Xms256m -J-Xmx384M``` as:
 ```
 " run "${JAVAC}" -J-Xms256m -J-Xmx384m -classpath "${classpath}" -sourcepath "${sourcepath}""
 ```
+In ```nano tools/cpp/lib_cc_configure.bzl``` find line 93:
+```
+def execute(repository_ctx, command, environment = None,
+  """Execute a command, return stdout if succeed and throw an error if it fails. Doesn't %-escape the result!"""
+```
+and add ```return "arm"``` as:
+```
+def get_cpu_value(repository_ctx):
+  return "arm"
+```
+
 And then,
 ```
-./complie.sh
+./compile.sh
  sudo cp /root/bazel11/output/bazel /usr/local/bin/bazel
 ```
 If tensorflow cannot find bazel excution file in ```/usr/bin/bazel```, then it will complain that it cannot find bazel so you need to install bazel.

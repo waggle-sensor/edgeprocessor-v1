@@ -10,6 +10,10 @@ Modified by Seongha Park
     # Apply to an image
     python3 demo.py --image=<URL or path to file>
 """
+import cv2
+# Use device on /dev/video1
+cam = cv2.VideoCapture(1)
+cv2.namedWindow("test")
 
 import time
 
@@ -90,7 +94,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     scores: (optional) confidence scores for each box
     figsize: (optional) the size of the image.
     """
-    display_start = time.time()
+    # display_start = time.time()
 
     # Number of instances
     N = boxes.shape[0]
@@ -148,8 +152,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     # plt.savefig('splash_vis_{:%Y%m%dT%H%M%S}.png'.format(datetime.datetime.now()))
     plt.savefig('splash.png')
 
-    display_end = time.time()
-    print("Display Elapsed %.2f" % (display_end - display_end))
+    # display_end = time.time()
+    # print("Display Elapsed %.2f" % (display_end - display_end))
 
 
 def random_colors(N, bright=True):
@@ -170,17 +174,44 @@ def detect_and_color_splash(model, image_path=None):
     # Run model detection and generate the color splash effect
     # Read image --> takes ~ 0.02 second for splash
     image = skimage.io.imread(args.image)
-    # Detect objects
-    detect_start = time.time()
+    # # Detect objects
+    # detect_start = time.time()
     r = model.detect([image], verbose=0)[0]
-    detect_end = time.time()
-    print("Detect Elapsed %.2f" % (detect_end - detect_start))
-    # Display objects
+    # detect_end = time.time()
+    # print("Detect Elapsed %.2f" % (detect_end - detect_start))
+    # # Display objects
     display_instances(image, r['rois'], r['masks'], r['class_ids'],
                             class_names, r['scores'])
     for i in range(len(r['rois'])):
         detected_objects[i] = (class_names[r['class_ids'][i]], r['scores'][i])
         # print(class_names[r['class_ids'][i]], r['scores'][i])
+
+def capture_frame():
+    # frame_start = time.time()
+    for i in range(5):
+        ret, frame = cam.read()
+        if not ret:
+            print('No camera on /dev/video1')
+            exit(0)
+
+        cv2.imshow("test", frame)
+
+    img_name = "opencv_frame.png"
+    cv2.imwrite(img_name, frame)
+    # print('\n', "{} written!".format(img_name))
+    # frame_end = time.time()
+    # print("Frame Capturing Elapsed %.2f" % (frame_end - frame_start))
+
+
+def evaluate():
+    try:
+        if main_image == None:
+            capture_frame()
+            args.image = "opencv_frame.png"
+        detect_and_color_splash(model, image_path=args.image)
+
+    except Exception as ex:
+        pass
 
 ############################################################
 #  Evaluation
@@ -203,6 +234,9 @@ if __name__ == '__main__':
                         help='Image to apply the color splash effect on')
     args = parser.parse_args()
 
+    if args.image == None:
+        main_image = None
+
     config = InferenceConfig()
 
     # Create model --> takes > 2 second for splash
@@ -217,11 +251,15 @@ if __name__ == '__main__':
 
     # Evaluate --> takes > 12 second for splash
     try:
-        detect_and_color_splash(model, image_path=args.image)
-        print(detected_objects)
-    except Exception as ex:
-        pass
+        while True:
+            evaluate()
 
-    main_end = time.time()
-    print("Evaluation Elapsed %.2f" % (main_end - main_start))
-    os.system('gvfs-open ./splash.png')
+            print('')
+            print(detected_objects)
+            main_end = time.time()
+            print("Evaluation Elapsed %.2f" % (main_end - main_start))
+            main_start = time.time()
+
+    except KeyboardInterrupt:
+        cam.release()
+        cv2.destroyAllWindows()
