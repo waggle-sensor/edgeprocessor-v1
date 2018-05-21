@@ -1,5 +1,9 @@
-# edge_processor
-Configuration and services specific to the Guest Node
+<!--
+waggle_topic=Waggle/Node/Edge Processor
+-->
+
+# Edge Processor Overview
+Configuration and services specific to the Edge Processor
 
 ##Static Camera Device Names##
 
@@ -34,6 +38,7 @@ crwxrwxrwx 1 root root 10, 61 Feb 11  2016 /dev/mali0
 ```
 
 # OpenCL for Mali-6xx
+_NOTE: Waggle 2.9.0 or greater already have OpenCL installed; no need to install manually_
 
 To be able to use the GPU in applications or OpenCV OpenCL library needs to be installed. To install OpenCL library
 
@@ -66,3 +71,5 @@ lrwxrwxrwx 1 root root       12 Jan  4 21:09 libGLESv2.so.2.0 -> libGLESv2.so
 lrwxrwxrwx 1 root root       12 Jan  4 21:09 libOpenCL.so.1 -> libOpenCL.so
 lrwxrwxrwx 1 root root       12 Jan  4 21:09 libOpenCL.so.1.1 -> libOpenCL.so
 ```
+## Image Pipeline
+The Image pipeline powered by Edge Processor can be found [here](image/README.md)
