@@ -6,7 +6,7 @@ waggle_topic=Waggle/Node/Edge Processor
 
 ## Pipeline architecture
 
-![Image pipeline architecture](pipeline_benchmark/resources/pipeline.png)
+![Image pipeline architecture](pipeline.png)
 
 A frame is captured by `waggle-image-producer` and is pushed into an exchange called `image_pipeline` in the local RMQ broker. Any processor, subscribing to the exchange, can receive images. The frame may be modified, by the process and put back in the exchange, wherein the routing-key is modified to signify manipulation. Whenever the frame is ready to be transferred to Beehive, it is put in the exchange with the routing-key `exporter`. The `waggle-image-exporter` service moves the frame to `images` queue. The frames in the `images` queue are asynchronously shipped (best-effort) to beehive by a shovel in NodeController.
 
