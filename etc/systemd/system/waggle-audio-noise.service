@@ -1,9 +1,0 @@
-[Unit]
-Description=Audio noise level calculator
-ConditionPathExists=/root/fs_locked
-
-[Service]
-ExecStart=/usr/bin/python3 -u /usr/lib/waggle/edge_processor/audio/pipeline/noise_level.py
-
-Restart=always
-RestartSec=30
