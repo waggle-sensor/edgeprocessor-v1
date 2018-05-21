@@ -1,3 +1,7 @@
+<!--
+waggle_topic=IGNORE
+-->
+
 # Processors on the Edge
 
 Any processors running on Edge processor have to follow the rules and constraints when use the pipeline not only for avoding any issues with other processors, but also being able to process data properly.
