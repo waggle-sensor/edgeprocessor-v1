@@ -1,5 +1,5 @@
 <!--
-waggle_topic=Waggle/Node/Edge Processor
+waggle_topic=/edge_processor/introduction
 -->
 
 # Edge Processor Overview
