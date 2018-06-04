@@ -5,7 +5,7 @@ waggle_topic=/edge_processor/introduction
 # Edge Processor Overview
 Configuration and services specific to the Edge Processor
 
-##Static Camera Device Names##
+## Static Camera Device Names
 
 The two cameras, upward and downward, need to be distinguished in order for plugins to properly handle data regarding their physical characteristics (e.g., orientation, direction, lens). Udev rules are provided that map the system's device names for the standard AoT cameras in /dev to static names that identify their physical position on the node.
 
