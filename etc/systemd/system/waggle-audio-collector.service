@@ -1,6 +1,14 @@
 [Unit]
 Description=Audio clip collector
+After=waggle-platform.target
+
+ConditionPathExists=/root/fs_locked
 
 [Service]
-Type=simple
-ExecStart=/usr/bin/python3 /usr/lib/waggle/edge_processor/audio/pipeline/example_audio.py
+ExecStart=/usr/bin/python3 -u /usr/lib/waggle/edge_processor/audio/collector/audio_collector.py
+
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=waggle-platform.target
