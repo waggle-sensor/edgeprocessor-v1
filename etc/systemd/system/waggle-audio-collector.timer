@@ -1,0 +1,11 @@
+[Unit]
+Description=Runs waggle-audio-collector.service every hour
+After=waggle-platform.target
+ConditionPathExists=/root/fs_locked
+
+[Timer]
+OnBootSec=300s
+OnCalendar=*:0/15
+
+[Install]
+WantedBy=waggle-platform.target
