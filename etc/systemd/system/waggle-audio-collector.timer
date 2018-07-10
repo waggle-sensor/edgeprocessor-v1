@@ -1,5 +1,5 @@
 [Unit]
-Description=Runs waggle-audio-collector.service every hour
+Description=Runs waggle-audio-collector.service every 15 minutes.
 After=waggle-platform.target
 ConditionPathExists=/root/fs_locked
 
