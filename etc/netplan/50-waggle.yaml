@@ -1,0 +1,6 @@
+network:
+    version: 2
+    ethernets:
+        eth0:
+            addresses: [10.31.81.51/24]
+            dhcp4: no
