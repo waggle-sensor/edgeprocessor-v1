@@ -38,4 +38,4 @@ echo "from=\"10.31.81.0/24\" ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4ohQv1Qksg2s
 echo "from=\"10.31.81.0/24\" ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCsYPMSrC6k33vqzulXSx8141ThfNKXiyFxwNxnudLCa0NuE1SZTMad2ottHIgA9ZawcSWOVkAlwkvufh4gjA8LVZYAVGYHHfU/+MyxhK0InI8+FHOPKAnpno1wsTRxU92xYAYIwAz0tFmhhIgnraBfkJAVKrdezE/9P6EmtKCiJs9At8FjpQPUamuXOy9/yyFOxb8DuDfYepr1M0u1vn8nTGjXUrj7BZ45VJq33nNIVu8ScEdCN1b6PlCzLVylRWnt8+A99VHwtVwt2vHmCZhMJa3XE7GqoFocpp8TxbxsnzSuEGMs3QzwR9vHZT9ICq6O8C1YOG6JSxuXupUUrHgd AoT_key" >> /root/.ssh/authorized_keys
 
 # Updating path to nc scripts in /root/.bashrc
-echo "PATH=$PATH:/usr/lib/waggle/nodecontroller/scripts/" >> /root/.bashrc
+echo "PATH=$PATH:/usr/lib/waggle/edgeprocessor/scripts/" >> /root/.bashrc
