@@ -39,3 +39,4 @@ echo "from=\"10.31.81.0/24\" ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCsYPMSrC6k33v
 
 # Updating path to ep scripts in /root/.bashrc
 echo "PATH=$PATH:/usr/lib/waggle/edge_processor/scripts/" >> /root/.bashrc
+echo "alias disks='blkid | sort -r'" >> /root/.bashrc
