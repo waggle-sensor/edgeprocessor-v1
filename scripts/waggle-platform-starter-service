@@ -15,7 +15,7 @@ def check_starter():
     if os.path.isfile(starter):
         print('Switching to operation mode...')
         os.remove(starter)
-        rc, out = call('waggle-switch-to-operation-mode')
+        rc, out = call('waggle-safe-mode')
         if rc == 0:
             print('Switching done')
         else:
