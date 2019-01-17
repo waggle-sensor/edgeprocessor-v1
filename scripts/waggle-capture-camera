@@ -1,6 +1,48 @@
 #!/bin/bash
-skip_frames=20
-mkdir -p /wagglerw/camera/
-fswebcam -d /dev/waggle_cam_top -S $skip_frames --subtitle $(hostname) -r 3264x2448 --jpeg -1 -D 0 /wagglerw/camera/c_top_$(hostname)_$(date +%s).jpg
-fswebcam -d /dev/waggle_cam_bottom -S $skip_frames --subtitle $(hostname) -r 3264x2448 --jpeg -1 -D 0 /wagglerw/camera/c_bottom_$(hostname)_$(date +%s).jpg
 
+make_thumbnail() {
+    convert -strip -interlace Plane -gaussian-blur 0.1 -quality 50% -resize 25% "$1" "$2"
+}
+
+make_outline() {
+    convert "$1" -canny 0x1+10%+30% "$2"
+}
+
+mkdir -p /wagglerw/camera/images
+mkdir -p /wagglerw/camera/thumbnails
+mkdir -p /wagglerw/camera/outlines
+
+top_filename="c_top_$(hostname)_$(date +%s).jpg"
+bottom_filename="c_bottom_$(hostname)_$(date +%s).jpg"
+
+conflict_services="waggle-image-exporter waggle-image-producer"
+
+# stop running image servers
+echo "stopping image services"
+
+for s in $conflict_services; do
+    systemctl stop $s
+done
+
+
+echo "capturing images"
+
+skip_frames=20
+fswebcam -d /dev/waggle_cam_top -S $skip_frames --subtitle "$(hostname) - $(date +'%Y/%m/%d %H:%M:%S')" -r 3264x2448 --jpeg -1 -D 0 "/wagglerw/camera/images/$top_filename"
+fswebcam -d /dev/waggle_cam_bottom -S $skip_frames --subtitle "$(hostname) - $(date +'%Y/%m/%d %H:%M:%S')" -r 3264x2448 --jpeg -1 -D 0 "/wagglerw/camera/images/$bottom_filename"
+
+echo "restart image services"
+
+for s in $conflict_services; do
+    if systemctl is-enabled $s; then
+        systemctl restart $s
+    fi
+done
+
+# generate derived images
+echo "generating derived images"
+
+for f in $top_filename $bottom_filename; do
+    make_thumbnail "/wagglerw/camera/images/$f" "/wagglerw/camera/thumbnails/$f"
+    make_outline "/wagglerw/camera/images/$f" "/wagglerw/camera/outlines/$f"
+done
