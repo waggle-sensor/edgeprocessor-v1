@@ -5,7 +5,7 @@ make_thumbnail() {
 }
 
 make_outline() {
-    convert "$1" -canny 0x1+10%+30% "$2"
+    convert "$1" -canny 0x1+10%+30% -quality 50% -resize 25% "$2"
 }
 
 mkdir -p /wagglerw/camera/images

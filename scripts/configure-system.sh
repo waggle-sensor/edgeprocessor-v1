@@ -5,7 +5,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # this will make sure that an empty eMMC card will get the waggle image
 # and try to recover uSD to make the uSD 3 partitions
-echo "recover me" > /root/do_recovery
+echo "recover me" > /wagglerw/do_recovery
 touch /root/waggle_platform_starter
 
 echo -e "10.31.81.10\tnodecontroller" >> /etc/hosts
