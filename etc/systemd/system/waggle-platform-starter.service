@@ -8,6 +8,7 @@ Before=waggle-platform.target
 ConditionPathExists=/root/waggle_platform_starter
 
 [Service]
+EnvironmentFile=/etc/waggle/environment
 WorkingDirectory=/usr/lib/waggle/edge_processor/scripts
 ExecStart=/usr/bin/python3 -u /usr/lib/waggle/edge_processor/scripts/waggle-platform-starter-service
 
