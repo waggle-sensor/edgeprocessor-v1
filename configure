@@ -44,8 +44,6 @@ rm -f /usr/local/bin/interface.py
 ln -s ${current_dir}/scripts/serial/interface.py /usr/local/bin/interface.py
 
 # set script permissions
-cd ${current_dir}/scripts
-chmod 700 *
-chmod 744 testing/*
+(cd scripts; chmod 700 *)
 
-cp ${current_dir}/root/asoundrc /root/.asoundrc
+cp root/asoundrc /root/.asoundrc
