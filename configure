@@ -28,17 +28,12 @@ fi
 # apt-get autoremove -y
 
 # install RabbitMQ configuration
-cp -r ${current_dir}/etc/rabbitmq /etc
+# cp -r ${current_dir}/etc/rabbitmq /etc
+cp -a etc/. /etc
 
-# copy systemd scripts
-cp ${current_dir}/etc/systemd/system/* /etc/systemd/system
-systemctl disable waggle-test.service
 systemctl enable waggle-image-producer.service
 systemctl enable waggle-image-exporter.service
 systemctl enable waggle-platform-starter.service
-
-# copy udev rules
-cp ${current_dir}/etc/udev/rules.d/* /etc/udev/rules.d
 
 rm -f /usr/local/bin/interface.py
 ln -s ${current_dir}/scripts/serial/interface.py /usr/local/bin/interface.py
