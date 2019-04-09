@@ -7,7 +7,7 @@ waggle_topic=/edge_processor/introduction
 This repo contains software and tools specific to the edge processor, covering functionality such as:
 
 * Installing required audio / video processing dependencies.
-* Capturing images for the image pipeline.
+* Operating the image pipeline.
 
 ## Setup
 
