@@ -16,6 +16,8 @@ First, we assume that the [core](https://github.com/waggle-sensor/core) repo has
 The edge processor dependencies and services can then be installed and configured by running:
 
 ```sh
+git clone https://github.com/waggle-sensor/edge_processor /usr/lib/waggle/edge_processor
+cd /usr/lib/waggle/edge_processor
 ./configure
 ```
 
