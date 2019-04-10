@@ -9,6 +9,9 @@ This repo contains software and tools specific to the edge processor, covering f
 * Installing required audio / video processing dependencies.
 * Operating the image pipeline.
 
+Note that this software was originally targetting the ODROID XU4, so some components may require
+significant tweaks before running them on other devices.
+
 ## Setup
 
 First, we assume that the [core](https://github.com/waggle-sensor/core) repo has already been set up on a device.
