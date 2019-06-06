@@ -168,7 +168,7 @@ class Camera(object):
 
 
 class CaptureWorker(Thread):
-    def __init__(self, event, device, width, height):
+    def __init__(self, event, device, width, height, skipping_frame=20):
         Thread.__init__(self)
         self.device = device
         self.event = event
@@ -176,6 +176,7 @@ class CaptureWorker(Thread):
         self.width = width
         self.height = height
         self.is_closed = False
+        self.skipping_frame = skipping_frame
 
     def close(self):
         self.is_closed = True
@@ -191,6 +192,9 @@ class CaptureWorker(Thread):
         try:
             with Camera(self.device) as camera:
                 camera.configure_and_go(self.width, self.height)
+                # skipping frames
+                for i in range(self.skipping_frame):
+                   camera.capture()
                 while not self.is_closed:
                     raw_frame = camera.capture()
                     if len(raw_frame) > 0:
