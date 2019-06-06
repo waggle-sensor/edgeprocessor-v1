@@ -1,0 +1,15 @@
+[Unit]
+Description=Image Producer for Bottom Camera
+After=waggle-platform.target
+
+ConditionPathExists=/root/fs_locked
+
+[Service]
+Environment="TARGET_DEVICE=/dev/waggle_cam_bottom"
+ExecStart=/usr/bin/python3 -u /usr/lib/waggle/edge_processor/image/producer/image_producer.py $TARGET_DEVICE
+
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=waggle-platform.target

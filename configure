@@ -37,7 +37,8 @@ fi
 # cp -r ${current_dir}/etc/rabbitmq /etc
 cp -a etc/. /etc
 
-systemctl enable waggle-image-producer.service
+systemctl enable waggle-image-producer-top.service
+systemctl enable waggle-image-producer-bottom.service
 systemctl enable waggle-image-exporter.service
 systemctl enable waggle-platform-starter.service
 

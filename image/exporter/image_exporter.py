@@ -135,6 +135,8 @@ def main():
         exchange=EXCHANGE,
         queue=queue.method.queue,
         routing_key=ROUTING_KEY_EXPORT)
+    # Delete existing images queue
+    channel.queue_delete(queue='images')
     channel.queue_declare(queue='images', arguments={'x-max-length': 32})
 
     channel.basic_consume(process_image, queue=queue.method.queue, no_ack=True)

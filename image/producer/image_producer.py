@@ -5,6 +5,7 @@
 # license.  For more details on the Waggle project, visit:
 #          http://www.wa8.gl
 # ANL:waggle-license
+import sys
 import os
 import subprocess
 import time
@@ -146,13 +147,15 @@ class Camera(object):
         if hasattr(self, 'buf_type'):
             fcntl.ioctl(self.fd, v4l2.VIDIOC_STREAMOFF, self.buf_type)
 
-    def configure_and_go(self, width, height, buffer_size=30):
+    def configure_and_go(self, width, height, buffer_size=10):
         self._set_resolution(width, height)
         self._create_buffer(buffer_size)
         self._start()
 
     def capture(self):
-        select.select([self.fd], [], [])
+        readable, writable, exceptional = select.select([self.fd], [], [], 1.0)  # Timeout 1 second
+        if not (readable or writable or exceptional):
+            return ''
         buf = v4l2.v4l2_buffer()
         buf.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
         buf.memory = v4l2.V4L2_MEMORY_MMAP
@@ -207,9 +210,11 @@ class CaptureWorker(Thread):
             self.is_closed = True
 
 
-def main():
+def main(devices=[]):
     global graceful_signal_to_kill
-    camera_devices = glob.glob('/dev/waggle_cam_*')
+    available_devices = glob.glob('/dev/waggle_cam_*')
+
+    camera_devices = [camera_device for camera_device in devices if camera_device in available_devices]
     if len(camera_devices) == 0:
         print('No available cameras detected!')
         exit(1)
@@ -221,9 +226,15 @@ def main():
         with open(capture_config_file) as config:
             capture_config = json.loads(config.read())
     except Exception:
+        pass
+
+    if capture_config is None:
         capture_config = get_default_configuration()
-        with open(capture_config_file, 'w') as config:
-            config.write(json.dumps(capture_config, sort_keys=True, indent=4))
+        try:
+            with open(capture_config_file, 'w') as config:
+                config.write(json.dumps(capture_config, sort_keys=True, indent=4))
+        except Exception:
+            pass
 
     # Get node_id for maker field of the images
     command = ['arp -a 10.31.81.10 | awk \'{print $4}\' | sed \'s/://g\'']
@@ -299,4 +310,8 @@ def sigterm_handler(signum, frame):
 
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, sigterm_handler)
-    main()
+    if len(sys.argv) >= 2:
+        main(sys.argv[1:])
+    else:
+        print('No target device is specified. Exiting...')
+        exit(1)
