@@ -23,12 +23,12 @@ sed -i 's/^#ListenAddress 0.0.0.0$/ListenAddress 10.31.81.51/' /etc/ssh/sshd_con
 # disable all password authentication
 sed -i 's/^#PasswordAuthentication yes$/PasswordAuthentication no/' /etc/ssh/sshd_config
 
-if [ $(lsb_release -r | tr "\t" " " | sed "s/\ //g"  | cut -d ":" -f 2) = "16.04" ]; then
-  # NetworkManager will try to manage any interfaces *not* listed in
-  # /etc/network/interfaces, so just replace it with what we want
-  cp ${script_dir}/../etc/network/interfaces /etc/network/interfaces
-elif [ $(lsb_release -r | tr "\t" " " | sed "s/\ //g"  | cut -d ":" -f 2) = "18.04" ]; then
+release=$(lsb_release -r | tr "\t" " " | sed "s/\ //g"  | cut -d ":" -f 2)
+cp ${script_dir}/../etc/network/interfaces /etc/network/interfaces
+
+if [ "${release}x" == "18.04x" ]; then
   # Ubuntu 18.04 uses netplan https://netplan.io/
+  mkdir -p /etc/netplan
   cp ${script_dir}/../etc/netplan/50-waggle.yaml /etc/netplan/50-waggle.yaml
 fi
 
