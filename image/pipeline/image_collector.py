@@ -122,6 +122,9 @@ class ImageCollectionWorker(Thread):
             content_type='b',
         )
         try:
+            if self.channel is None or self.channel.is_closed:
+                self.open()
+
             self.channel.basic_publish(
                 properties=properties,
                 exchange=EXCHANGE,
