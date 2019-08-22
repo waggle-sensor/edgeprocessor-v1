@@ -28,13 +28,21 @@ producer_name = os.path.basename(__file__)
 def get_default_configuration():
     default_configuration = {
         'top': {
-            'resolution': '3264x2448',
+            'resolution': '3264x2448', # 8 MP
             'rotate': 0,
         },
         'bottom': {
-            'resolution': '2592x1944',
+            'resolution': '2592x1944', # 5 MP
             'rotate': 180,
-        }
+        },
+        'left': {
+            'resolution': '4208x3120', # 13 MP
+            'rotate': 0,
+        },
+        'right': {
+            'resolution': '4208x3120', # 13 MP
+            'rotate': 0,
+        },
     }
     return default_configuration
 
