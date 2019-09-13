@@ -49,13 +49,12 @@ def get_default_configuration():
 
 def get_rmq_connection():
     try:
-        connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        connection = pika.BlockingConnection(pika.URLParameters('amqp://localhost'))
         channel = connection.channel()
         channel.exchange_declare(exchange='image_pipeline', exchange_type='direct', durable=True)
         return channel
     except Exception:
         return None
-
 
 def send_to_rmq(channel, frame, timestamp, config):
     headers = {
