@@ -122,10 +122,10 @@ def process_image(channel, method, properties, body):
 
 def main():
 
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    connection = pika.BlockingConnection(pika.URLParameters('amqp://localhost'))
     channel = connection.channel()
     channel.exchange_declare(exchange=EXCHANGE, exchange_type='direct', durable=True)
-    queue = channel.queue_declare(exclusive=True)
+    queue = channel.queue_declare('', exclusive=True)
 
     # Binding consistently fails on a clean RMQ broker unless
     # a small delay is introduced between declarations and binding
@@ -139,7 +139,7 @@ def main():
     channel.queue_delete(queue='images')
     channel.queue_declare(queue='images', arguments={'x-max-length': 32})
 
-    channel.basic_consume(process_image, queue=queue.method.queue, no_ack=True)
+    channel.basic_consume(queue.method.queue, process_image, auto_ack=True)
     try:
         channel.start_consuming()
     except (KeyboardInterrupt, Exception) as ex:
