@@ -2,6 +2,8 @@
 waggle_topic=/edge_processor/introduction
 -->
 
+# _This repo is archived. See https://github.com/waggle-sensor/edgeprocessor_
+
 # Node Stack - Edge Processor Repo
 
 This repo contains software and tools specific to the edge processor, covering functionality such as:
